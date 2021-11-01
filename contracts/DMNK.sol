@@ -50,8 +50,8 @@ contract DMNK {
     GameInstance[] games;
     address payable minter;
 
-    event GameCreated(uint256 gameId, address actor);
-    event GameStarted(uint256 gameId, address actor);
+    event GameCreated(uint256 gameId, address alice, address bob);
+    event GameStarted(uint256 gameId, address alice, address bob);
 
     function getFirstPendingGame(address actor) public view returns (LookupResult memory) {
         for (uint256 index=0; index < games.length; index++) {
@@ -72,13 +72,13 @@ contract DMNK {
                     status: GameStatus.Pending
                 })
             );
-            emit GameCreated({gameId: games.length, actor: main});
+            emit GameCreated({gameId: games.length, alice: main, bob: address(0)});
         }
         else {
             GameInstance storage game = games[maybeGame.index];
             game.bob = AddressPair(payable(main), operational);
             game.status = GameStatus.Running;
-            emit GameStarted({gameId: games.length, actor: main});
+            emit GameStarted({gameId: maybeGame.index, alice: game.alice.main, bob: main});
         }
     }
 

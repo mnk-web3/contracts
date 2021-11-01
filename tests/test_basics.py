@@ -60,7 +60,7 @@ def prepayedWallets(w3):
         tx_signed = w3.eth.account.sign_transaction(tx, BOBS_PRIV)
         w3.eth.send_raw_transaction(tx_signed.rawTransaction)
 
-    time.sleep(3)
+    time.sleep(4)
 
     return wallets
 
@@ -83,3 +83,56 @@ def test_matchmaking_parity(w3, contract, prepayedWallets):
         time.sleep(4)
     (index, flag) = contract.functions.getFirstPendingGame(BOBS_PUB).call()
     assert (not flag) & (index == 0)
+
+
+def test_matchmaking_logs(w3, contract, prepayedWallets):
+    (aliceMain, aliceOp), (bobMain, bobOp), *_ = prepayedWallets
+    # Alice joins the game
+    w3.eth.send_raw_transaction(
+        w3.eth.account.sign_transaction(
+            contract.functions.joinGame(aliceMain.address, aliceOp.address).buildTransaction(
+                {
+                    "from": aliceMain.address,
+                    "chainId": 1666700000,
+                    "gas": 7 * 10 ** 6,
+                    "gasPrice": 10 ** 9,
+                    "nonce": 0,
+                },
+            ),
+            aliceMain.privateKey
+        ).rawTransaction
+    )
+    create_event_filter = contract.events.GameCreated.createFilter(fromBlock="latest")
+    # Now polling for the GameCreated event
+    found = False
+    while not found:
+        events = create_event_filter.get_all_entries()
+        for event in events:
+            if event.args.alice == aliceMain.address:
+                assert event.args.bob == "0x0000000000000000000000000000000000000000"
+                found = True
+        time.sleep(0.2)
+    # Bob joins the game
+    w3.eth.send_raw_transaction(
+        w3.eth.account.sign_transaction(
+            contract.functions.joinGame(bobMain.address, bobOp.address).buildTransaction(
+                {
+                    "from": bobMain.address,
+                    "chainId": 1666700000,
+                    "gas": 7 * 10 ** 6,
+                    "gasPrice": 10 ** 9,
+                    "nonce": 0,
+                },
+            ),
+            bobMain.privateKey
+        ).rawTransaction
+    )
+    started_event_filter = contract.events.GameStarted.createFilter(fromBlock="latest")
+    found = False
+    while not found:
+        events = started_event_filter.get_all_entries()
+        for event in events:
+            if event.args.alice == aliceMain.address:
+                assert event.args.bob == bobMain.address
+                found = True
+        time.sleep(0.2)
