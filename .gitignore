@@ -1,4 +1,5 @@
 # contract build artifacts
+check.py
 .env
 build/*
 
