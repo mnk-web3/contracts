@@ -62,23 +62,23 @@ contract DMNK {
         return LookupResult({index: 0, success: false});
     }
 
-    function joinGame(address main, address operational) public {
-        LookupResult memory maybeGame = getFirstPendingGame(main);
+    function joinGame(address operational) payable public {
+        LookupResult memory maybeGame = getFirstPendingGame(msg.sender);
         if (!maybeGame.success) {
             games.push(
                 GameInstance({
-                    alice: AddressPair(payable(main), operational),
+                    alice: AddressPair(payable(msg.sender), operational),
                     bob: AddressPair(payable(address(0)), address(0)),
                     status: GameStatus.Pending
                 })
             );
-            emit GameCreated({gameId: games.length, alice: main, bob: address(0)});
+            emit GameCreated({gameId: games.length - 1, alice: msg.sender, bob: address(0)});
         }
         else {
             GameInstance storage game = games[maybeGame.index];
-            game.bob = AddressPair(payable(main), operational);
+            game.bob = AddressPair(payable(msg.sender), operational);
             game.status = GameStatus.Running;
-            emit GameStarted({gameId: maybeGame.index, alice: game.alice.main, bob: main});
+            emit GameStarted({gameId: maybeGame.index, alice: game.alice.main, bob: msg.sender});
         }
     }
 

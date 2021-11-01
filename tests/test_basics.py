@@ -68,7 +68,7 @@ def prepayedWallets(w3):
 def test_matchmaking_parity(w3, contract, prepayedWallets):
     for index, (main, operational) in enumerate(prepayedWallets):
         raw_tx = w3.eth.account.sign_transaction(
-            contract.functions.joinGame(main.address, operational.address).buildTransaction(
+            contract.functions.joinGame(operational.address).buildTransaction(
                 {
                     "from": main.address,
                     "chainId": 1666700000,
@@ -90,7 +90,7 @@ def test_matchmaking_logs(w3, contract, prepayedWallets):
     # Alice joins the game
     w3.eth.send_raw_transaction(
         w3.eth.account.sign_transaction(
-            contract.functions.joinGame(aliceMain.address, aliceOp.address).buildTransaction(
+            contract.functions.joinGame(aliceOp.address).buildTransaction(
                 {
                     "from": aliceMain.address,
                     "chainId": 1666700000,
@@ -104,18 +104,20 @@ def test_matchmaking_logs(w3, contract, prepayedWallets):
     )
     create_event_filter = contract.events.GameCreated.createFilter(fromBlock="latest")
     # Now polling for the GameCreated event
-    found = False
-    while not found:
+    create_event_found = False
+    gameIdAsCreated = None
+    while not create_event_found:
         events = create_event_filter.get_all_entries()
         for event in events:
             if event.args.alice == aliceMain.address:
                 assert event.args.bob == "0x0000000000000000000000000000000000000000"
-                found = True
+                gameIdAsCreated = event.args.gameId
+                create_event_found = True
         time.sleep(0.2)
     # Bob joins the game
     w3.eth.send_raw_transaction(
         w3.eth.account.sign_transaction(
-            contract.functions.joinGame(bobMain.address, bobOp.address).buildTransaction(
+            contract.functions.joinGame(bobOp.address).buildTransaction(
                 {
                     "from": bobMain.address,
                     "chainId": 1666700000,
@@ -128,11 +130,12 @@ def test_matchmaking_logs(w3, contract, prepayedWallets):
         ).rawTransaction
     )
     started_event_filter = contract.events.GameStarted.createFilter(fromBlock="latest")
-    found = False
-    while not found:
+    started_event_found = False
+    while not started_event_found:
         events = started_event_filter.get_all_entries()
         for event in events:
             if event.args.alice == aliceMain.address:
                 assert event.args.bob == bobMain.address
-                found = True
+                assert gameIdAsCreated is not None and event.args.gameId == gameIdAsCreated
+                started_event_found = True
         time.sleep(0.2)
