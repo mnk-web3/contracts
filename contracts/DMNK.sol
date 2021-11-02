@@ -23,26 +23,29 @@ struct GameState {
     Move[] movesBob;
 }
 
+struct Participant {
+    AddressPair addresses;
+    uint256 deposit;
+    uint256 range_from;
+    uint256 range_to;
+}
+
 struct GameInstance {
-    AddressPair alice;
-    AddressPair bob;
+    Participant alice;
+    Participant bob;
     GameStatus status;
-}
-
-enum JoinAction {
-    CreateNewGame, StartNewGame
-}
-
-
-struct JoinStatus {
-    JoinAction action;
-    uint256 gameId;
 }
 
 
 struct LookupResult {
     uint256 index;
     bool success;
+}
+
+
+struct GamesStats {
+    uint256 pending;
+    uint256 running;
 }
 
 
@@ -53,22 +56,71 @@ contract DMNK {
     event GameCreated(uint256 gameId, address alice, address bob);
     event GameStarted(uint256 gameId, address alice, address bob);
 
-    function getFirstPendingGame(address actor) public view returns (LookupResult memory) {
+    function getGamesStats() view public returns(GamesStats memory) {
+        uint256 pendingCounter = 0;
+        uint256 runningCounter = 0;
+        for (uint256 counter=0; counter < games.length; counter++) {
+            if (games[counter].status == GameStatus.Pending) {
+                pendingCounter++;
+            } else if (games[counter].status == GameStatus.Running) {
+                runningCounter++;
+            }
+        }
+        return GamesStats({pending: pendingCounter, running: runningCounter});
+    }
+
+    function getFirstPendingGame(uint256 myDeposit, address myAddress, uint256 range_from, uint256 range_to)
+        private view
+        returns (LookupResult memory) {
         for (uint256 index=0; index < games.length; index++) {
-            if (games[index].status == GameStatus.Pending && games[index].alice.main != actor) {
+            bool condition = (
+                games[index].status == GameStatus.Pending &&
+                games[index].alice.addresses.main != myAddress &&
+                games[index].alice.deposit >= range_from &&
+                games[index].alice.deposit <= range_to &&
+                myDeposit >= games[index].alice.range_from && 
+                myDeposit <= games[index].alice.range_to
+            );
+            if (condition) {
                 return LookupResult({index: index, success: true});
             }
         }
         return LookupResult({index: 0, success: false});
     }
 
-    function joinGame(address operational) payable public {
-        LookupResult memory maybeGame = getFirstPendingGame(msg.sender);
+    function joinGame(address operational, uint256 range_from, uint256 range_to)
+        payable public {
+        require(
+            range_from <= msg.value && msg.value <= range_to,
+            "You have to provide at least as much as you ask."
+        );
+        LookupResult memory maybeGame = getFirstPendingGame(
+            {
+                range_from: range_from,
+                range_to: range_to,
+                myAddress: msg.sender,
+                myDeposit: msg.value
+            }
+        );
         if (!maybeGame.success) {
             games.push(
                 GameInstance({
-                    alice: AddressPair(payable(msg.sender), operational),
-                    bob: AddressPair(payable(address(0)), address(0)),
+                    alice: Participant(
+                        {
+                            addresses: AddressPair(payable(msg.sender), operational),
+                            deposit: msg.value,
+                            range_from: range_from,
+                            range_to: range_to
+                        }
+                    ),
+                    bob: Participant(
+                        {
+                            addresses: AddressPair(payable(address(0)), address(0)), 
+                            deposit: 0,
+                            range_from: 0,
+                            range_to: 0
+                        }
+                    ),
                     status: GameStatus.Pending
                 })
             );
@@ -76,9 +128,16 @@ contract DMNK {
         }
         else {
             GameInstance storage game = games[maybeGame.index];
-            game.bob = AddressPair(payable(msg.sender), operational);
+            game.bob = Participant(
+                {
+                    addresses: AddressPair(payable(msg.sender), operational),
+                    deposit: msg.value,
+                    range_from: range_from,
+                    range_to: range_to
+                }
+            );
             game.status = GameStatus.Running;
-            emit GameStarted({gameId: maybeGame.index, alice: game.alice.main, bob: msg.sender});
+            emit GameStarted({gameId: maybeGame.index, alice: game.alice.addresses.main, bob: msg.sender});
         }
     }
 
