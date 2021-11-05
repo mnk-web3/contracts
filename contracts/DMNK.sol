@@ -4,11 +4,13 @@ pragma solidity =0.8.9;
 import "./GameInstance.sol" as GI;
 import "./Types.sol" as T;
 
-
 function deqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
     for (uint256 counter=0; counter < queue.length; counter++) {
         if (queue[counter] == game) {
-            delete queue[counter];
+            for (uint index = counter; index < queue.length - 1; index++){
+                queue[index] = queue[index+1];
+            }
+            queue.pop();
         }
     }
 }
