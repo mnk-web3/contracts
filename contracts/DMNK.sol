@@ -1,147 +1,112 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
-enum GameStatus {
-    Alice,
-    Bob,
-    Running,
-    Pending
-}
+import "./GameInstance.sol" as GI;
+import "./Types.sol" as T;
 
-struct AddressPair {
-    address payable main;
-    address operational;
-}
 
-struct Move {
-    int8 x;
-    int8 y;
-}
-
-struct GameState {
-    Move[] movesAlice;
-    Move[] movesBob;
-}
-
-struct Participant {
-    AddressPair addresses;
-    uint256 deposit;
-    uint256 range_from;
-    uint256 range_to;
-}
-
-struct GameInstance {
-    Participant alice;
-    Participant bob;
-    GameStatus status;
+function deqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
+    for (uint256 counter=0; counter < queue.length; counter++) {
+        if (queue[counter] == game) {
+            delete queue[counter];
+        }
+    }
 }
 
 
-struct LookupResult {
-    uint256 index;
-    bool success;
+function enqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
+    queue.push(game);
 }
 
 
-struct GamesStats {
-    uint256 pending;
-    uint256 running;
+function getFirstPendingGame(GI.GameInstance[] storage queue, T.Participant memory participant)
+    view
+    returns(T.LookupResult memory)
+{
+    for (uint256 counter=0; counter < queue.length; counter++) {
+        GI.GameInstance game = queue[counter];
+        T.Participant memory alice = game.getParticipant(T.Role.Alice);
+        bool condition = (
+            participant.addresses.main != alice.addresses.main &&
+            participant.deposit >= alice.range_from &&
+            participant.deposit <= alice.range_to &&
+            alice.deposit >= participant.range_from &&
+            alice.deposit <= participant.range_to
+        );
+        if (condition) {
+            return T.LookupResult({game: address(game), success: true});
+        }
+    }
+    return T.LookupResult({game: address(0), success: false});
 }
-
 
 contract DMNK {
-    GameInstance[] games;
-    address payable minter;
 
-    event GameCreated(uint256 gameId, address alice, address bob);
-    event GameStarted(uint256 gameId, address alice, address bob);
+    // DMNK owner
+    address payable _minter;
 
-    function getGamesStats() view public returns(GamesStats memory) {
-        uint256 pendingCounter = 0;
-        uint256 runningCounter = 0;
-        for (uint256 counter=0; counter < games.length; counter++) {
-            if (games[counter].status == GameStatus.Pending) {
-                pendingCounter++;
-            } else if (games[counter].status == GameStatus.Running) {
-                runningCounter++;
-            }
-        }
-        return GamesStats({pending: pendingCounter, running: runningCounter});
+    // GI.GameInstance public _instance;
+    GI.GameInstance[] _pendingQueue;
+    mapping(address => bool) _runningGames;
+
+    // Events
+    event GameCreated(address gameAddress, address alice);
+    event GameStarted(
+        address gameAddress,
+        address alice,
+        address bob,
+        address currentTurn
+    );
+    event GameFinished(address gameAddress, address alice, address bob);
+
+    function getQueueLength() view public returns(uint256) {
+        return _pendingQueue.length;
     }
 
-    function getFirstPendingGame(uint256 myDeposit, address myAddress, uint256 range_from, uint256 range_to)
-        private view
-        returns (LookupResult memory) {
-        for (uint256 index=0; index < games.length; index++) {
-            bool condition = (
-                games[index].status == GameStatus.Pending &&
-                games[index].alice.addresses.main != myAddress &&
-                games[index].alice.deposit >= range_from &&
-                games[index].alice.deposit <= range_to &&
-                myDeposit >= games[index].alice.range_from && 
-                myDeposit <= games[index].alice.range_to
-            );
-            if (condition) {
-                return LookupResult({index: index, success: true});
-            }
-        }
-        return LookupResult({index: 0, success: false});
+    function completeGame(address payable winner, uint256 gain) external {
+        require(_runningGames[msg.sender], "Game does not exist");
+        delete _runningGames[msg.sender];
+        (bool success,) = winner.call{value: gain}("");
+        require(success, "Failed to transfer gain");
     }
 
-    function joinGame(address operational, uint256 range_from, uint256 range_to)
-        payable public {
-        require(
-            range_from <= msg.value && msg.value <= range_to,
-            "You have to provide at least as much as you ask."
-        );
-        LookupResult memory maybeGame = getFirstPendingGame(
+    function play(address operational, uint256 range_from, uint256 range_to)
+        public
+        payable
+    {
+        require(msg.value <= range_to && msg.value >= range_from);
+
+        T.Participant memory participant = T.Participant(
             {
+                addresses: T.AddressPair(payable(msg.sender), operational),
+                deposit: msg.value,
                 range_from: range_from,
-                range_to: range_to,
-                myAddress: msg.sender,
-                myDeposit: msg.value
+                range_to: range_to
             }
         );
-        if (!maybeGame.success) {
-            games.push(
-                GameInstance({
-                    alice: Participant(
-                        {
-                            addresses: AddressPair(payable(msg.sender), operational),
-                            deposit: msg.value,
-                            range_from: range_from,
-                            range_to: range_to
-                        }
-                    ),
-                    bob: Participant(
-                        {
-                            addresses: AddressPair(payable(address(0)), address(0)), 
-                            deposit: 0,
-                            range_from: 0,
-                            range_to: 0
-                        }
-                    ),
-                    status: GameStatus.Pending
-                })
-            );
-            emit GameCreated({gameId: games.length - 1, alice: msg.sender, bob: address(0)});
-        }
-        else {
-            GameInstance storage game = games[maybeGame.index];
-            game.bob = Participant(
-                {
-                    addresses: AddressPair(payable(msg.sender), operational),
-                    deposit: msg.value,
-                    range_from: range_from,
-                    range_to: range_to
-                }
-            );
-            game.status = GameStatus.Running;
-            emit GameStarted({gameId: maybeGame.index, alice: game.alice.addresses.main, bob: msg.sender});
+        T.LookupResult memory result = getFirstPendingGame(_pendingQueue, participant);
+    
+        if (result.success) {
+            GI.GameInstance game = GI.GameInstance(result.game);
+            game.joinAsBob(participant);
+            // Remove the game from waiting queue
+            deqGame(_pendingQueue, game);
+            _runningGames[address(game)] = true;
+            emit GameStarted({
+                gameAddress: address(game),
+                alice: game.getParticipant(T.Role.Alice).addresses.main,
+                bob: game.getParticipant(T.Role.Bob).addresses.main,
+                currentTurn: game.whosTurnNow()
+            });
+        } else {
+            GI.GameInstance game = new GI.GameInstance(participant);
+            // Add the game to waiting queue
+            enqGame(_pendingQueue, game);
+            emit GameCreated(address(game), participant.addresses.main);
         }
     }
 
     constructor() {
-        minter = payable(msg.sender);
+        _minter = payable(msg.sender);
     }
 }
