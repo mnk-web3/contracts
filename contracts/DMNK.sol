@@ -65,9 +65,12 @@ contract DMNK {
 
     function completeGame(address payable winner, uint256 gain) external {
         require(_runningGames[msg.sender], "Game does not exist");
+        uint256 goesToHouse = gain / 10;
+        uint256 goesToWinner = gain - goesToHouse;
+        (bool successWinnerTransfer,) = winner.call{value: goesToWinner}("");
+        (bool successHouseTransfer,) = _minter.call{value: goesToHouse}("");
         delete _runningGames[msg.sender];
-        (bool success,) = winner.call{value: gain}("");
-        require(success, "Failed to transfer gain");
+        require(successWinnerTransfer && successHouseTransfer, "Failed to transfer funds.");
         emit GameFinished(msg.sender);
     }
 
