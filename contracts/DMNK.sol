@@ -63,14 +63,15 @@ contract DMNK {
         return _pendingQueue.length;
     }
 
-    function completeGame(address payable winner, uint256 gain) external {
+    function complete(address payable winner, uint256 gain) external {
+        // msg.sender here is a GameInstance instance
         require(_runningGames[msg.sender], "Game does not exist");
         uint256 goesToHouse = gain / 10;
         uint256 goesToWinner = gain - goesToHouse;
         (bool successWinnerTransfer,) = winner.call{value: goesToWinner}("");
         (bool successHouseTransfer,) = _minter.call{value: goesToHouse}("");
-        delete _runningGames[msg.sender];
         require(successWinnerTransfer && successHouseTransfer, "Failed to transfer funds.");
+        delete _runningGames[msg.sender];
         emit GameFinished(msg.sender);
     }
 

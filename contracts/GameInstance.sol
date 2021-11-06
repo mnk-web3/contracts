@@ -192,7 +192,7 @@ contract GameInstance {
         // Check if the current player has just won the game
         if (checkWinner(_moves, x, y, _state.currentTurn)) {
             _state.status = T.GameStatus.Complete;
-            _parent.completeGame(
+            _parent.complete(
                 payable(_participants[_state.currentTurn].addresses.main),
                 _participants[T.Role.Alice].deposit + _participants[T.Role.Bob].deposit 
             );
