@@ -29,7 +29,7 @@ struct Participant {
 }
 
 enum Role {
-    Alice, Bob
+    Unknown, Alice, Bob
 }
 
 struct Move {

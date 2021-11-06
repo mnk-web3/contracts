@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
+
 import "./GameInstance.sol" as GI;
 import "./Types.sol" as T;
+
 
 function deqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
     for (uint256 counter=0; counter < queue.length; counter++) {
@@ -42,6 +44,7 @@ function getFirstPendingGame(GI.GameInstance[] storage queue, T.Participant memo
     return T.LookupResult({game: address(0), success: false});
 }
 
+
 contract DMNK {
 
     // DMNK owner
@@ -53,13 +56,8 @@ contract DMNK {
 
     // Events
     event GameCreated(address gameAddress, address alice);
-    event GameStarted(
-        address gameAddress,
-        address alice,
-        address bob,
-        address currentTurn
-    );
-    event GameFinished(address gameAddress, address alice, address bob);
+    event GameStarted(address gameAddress, address alice, address bob, address currentTurn);
+    event GameFinished(address gameAddress);
 
     function getQueueLength() view public returns(uint256) {
         return _pendingQueue.length;
@@ -70,6 +68,7 @@ contract DMNK {
         delete _runningGames[msg.sender];
         (bool success,) = winner.call{value: gain}("");
         require(success, "Failed to transfer gain");
+        emit GameFinished(msg.sender);
     }
 
     function play(address operational, uint256 range_from, uint256 range_to)
@@ -98,7 +97,7 @@ contract DMNK {
                 gameAddress: address(game),
                 alice: game.getParticipant(T.Role.Alice).addresses.main,
                 bob: game.getParticipant(T.Role.Bob).addresses.main,
-                currentTurn: game.whosTurnNow()
+                currentTurn: game.getCurrentTurn()
             });
         } else {
             GI.GameInstance game = new GI.GameInstance(participant);

@@ -17,6 +17,126 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     view
     returns (bool)
 {
+    uint8 th = 5;
+
+    // Check verticals
+    uint8 verticalCounter = 1;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x][y+shift] == turn) {
+            verticalCounter++;
+        } else {
+            break;
+        }
+        if (y + shift == 255) {
+            break;
+        }
+    }
+    verticalCounter--;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x][y-shift] == turn) {
+            verticalCounter++;
+        } else {
+            break;
+        }
+        if (y - shift == 0) {
+            break;
+        }
+    }
+    verticalCounter--;
+    if (verticalCounter >= th) {
+        return true;
+    }
+
+    // Check horizontals
+    uint8 horizontalCounter = 1;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x+shift][y] == turn) {
+            horizontalCounter++;
+        } else {
+            break;
+        }
+        if (x + shift == 255) {
+            break;
+        }
+    }
+    horizontalCounter--;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x-shift][y] == turn) {
+            horizontalCounter++;
+        } else {
+            break;
+        }
+        if (x - shift == 0) {
+            break;
+        }
+    }
+    horizontalCounter--;
+    if (horizontalCounter >= th) {
+        return true;
+    }
+
+    // Check first diagonal
+    // x00
+    // 0x0
+    // 00x
+    uint8 firstDiagonalCounter = 1;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x-shift][y+shift] == turn) {
+            firstDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x - shift == 0) || (y + shift == 255)) {
+            break;
+        }
+    }
+    firstDiagonalCounter--;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x+shift][y-shift] == turn) {
+            firstDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x + shift == 255) || (y - shift == 0)) {
+            break;
+        }
+    }
+    firstDiagonalCounter--;
+    if (firstDiagonalCounter >= th) {
+        return true;
+    }
+
+    // Check second diagonal
+    // 00x 
+    // 0x0
+    // x00 
+    uint8 secondDiagonalCounter = 1;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x+shift][y+shift] == turn) {
+            secondDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x + shift == 255) || (y + shift == 255)) {
+            break;
+        }
+    }
+    secondDiagonalCounter--;
+    for (uint8 shift=0; shift<=th; shift++) {
+        if (moves[x-shift][y-shift] == turn) {
+            secondDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x - shift == 0) || (y - shift == 0)) {
+            break;
+        }
+    }
+    secondDiagonalCounter--;
+    if (secondDiagonalCounter >= th) {
+        return true;
+    }
+
     return false;
 }
 
@@ -36,8 +156,13 @@ contract GameInstance {
     }
 
     // Get the main address of the current turn
-    function whosTurnNow() public view returns (address) {
+    function getCurrentTurn() external view returns (address) {
         return _participants[_state.currentTurn].addresses.main;
+    }
+
+    // Get the main address of the current turn
+    function getCell(uint8 x, uint8 y) external view returns(T.Role) {
+        return _moves[x][y];
     }
 
     // Get the participant by one's role
@@ -53,7 +178,7 @@ contract GameInstance {
         );
         // If it is running, check that the caller is elidable to call
         require(
-            _participants[_state.currentTurn].addresses.main == msg.sender,
+            _participants[_state.currentTurn].addresses.operational == msg.sender,
             "This is not your turn, bud."
         );
         // Check that this move hasnt been done yet
@@ -68,7 +193,7 @@ contract GameInstance {
         if (checkWinner(_moves, x, y, _state.currentTurn)) {
             _state.status = T.GameStatus.Complete;
             _parent.completeGame(
-                payable(whosTurnNow()),
+                payable(_participants[_state.currentTurn].addresses.main),
                 _participants[T.Role.Alice].deposit + _participants[T.Role.Bob].deposit 
             );
         } else {
