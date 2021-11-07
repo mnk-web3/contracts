@@ -18,8 +18,10 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     returns (bool)
 {
     uint8 th = 5;
-
     // Check verticals
+    // 0x0
+    // 0x0
+    // 0x0
     uint8 verticalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x][y+shift] == turn) {
@@ -47,6 +49,9 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     }
 
     // Check horizontals
+    // 000
+    // xxx
+    // 000
     uint8 horizontalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x+shift][y] == turn) {
