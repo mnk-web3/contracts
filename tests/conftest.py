@@ -11,8 +11,10 @@ from web3.exceptions import TransactionNotFound
 ABIAddress = namedtuple("ABIAddress", "abi address")
 
 # Bobs acc
-BOBS_PRIV = "c8c85b769e94fed2e800e05f20dba23e12a77bc9223b85cb04db8b8e4045634b"
-BOBS_PUB = "0x53E450514589267b6B83E279Cd67c2C22987ba8B"
+BOBS_PRIV = "c07bfdf4819946009c06bfee12f9ef2d37c1a216600961460121f1c085d16316"
+BOBS_PUB = Web3.toChecksumAddress("0xda4566317090ba89d8d88f5b5fcdb34d8aab87fd")
+
+
 NUMBER_OF_PREPAYED_WALLETS = 2
 
 
@@ -20,7 +22,7 @@ def waitForTransaction(w3, txHash: str, pollTime: float = 0.2, retries: int = 10
     currentlyRetried = 0
     while True:
         try:
-            if w3.eth.getTransactionReceipt(txHash).status == 1:
+            if w3.eth.getTransactionReceipt(txHash.hex()).status == 1:
                 break
         except TransactionNotFound:
             currentlyRetried += 1
@@ -58,7 +60,7 @@ def gameInstanceABI(contractArtifacts):
 @pytest.fixture(scope="session")
 def w3():
     return Web3(Web3.WebsocketProvider("wss://ws.s0.pops.one/"))
-    #return Web3(Web3.HTTPProvider("https://api.s0.b.hmny.io"))
+
 
 @pytest.fixture(scope="function")
 def dmnkContract(w3, dmnkABI):
@@ -100,7 +102,7 @@ def prepayedWallets(w3):
                         "nonce": nonce,
                         "from": BOBS_PUB,
                         "to": operational.address,
-                        "value": 5 * 10 ** 17,
+                        "value": 10 ** 17,
                     },
                     BOBS_PRIV
                 ).rawTransaction)

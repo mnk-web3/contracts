@@ -1,10 +1,11 @@
+import math
 import pytest
-from .conftest import waitForTransaction
+from .conftest import waitForTransaction, BOBS_PUB
 
 
 CASES = [
     (
-        (0,0),
+        (0,0),   # Alice
         (10,10),
         (1,0),
         (11,10),
@@ -13,8 +14,6 @@ CASES = [
         (3,0),
         (13,10),
         (4,0),
-        (14,10),
-        (5,0),
     ),
 ]
 
@@ -39,15 +38,29 @@ def doTheMove(w3, game, wallet, x, y, nonce):
 
 @pytest.mark.parametrize("moves", CASES)
 def test_moves(moves, w3, dmnkContract, gameContract, twoPlayers):
-    address, ((_, aliceOp), (_, bobOp)) = twoPlayers
-    print(address)
-    print("Alice", aliceOp.address)
-    print("Bob", bobOp.address)
+    _, ((_, aliceOp), (_, bobOp)) = twoPlayers
+    nonceAlice = w3.eth.getTransactionCount(aliceOp.address)
+    nonceBob = w3.eth.getTransactionCount(bobOp.address)
+    valueLocked = gameContract.functions.getLockedValue().call()
+    bobsBalance = w3.eth.get_balance(BOBS_PUB)
 
+    # Main game sequence
     for (index, (x, y)) in enumerate(moves):
         if index % 2 == 0:
-            doTheMove(w3, gameContract, aliceOp, x, y, index)
+            doTheMove(w3, gameContract, aliceOp, x, y, nonceAlice)
+            nonceAlice += 1
         else:
-            doTheMove(w3, gameContract, bobOp, x, y, index)
+            doTheMove(w3, gameContract, bobOp, x, y, nonceBob)
+            nonceBob += 1
+
+    # Search for the GameFinished event
+    gameCompletedEvent = dmnkContract.events.GameFinished.createFilter(fromBlock="latest")
+    eventFound = False
+    while not eventFound:
+        for event in gameCompletedEvent.get_all_entries():
+            if event.args.gameAddress == gameContract.address:
+                eventFound = True
+
+    assert w3.eth.get_balance(BOBS_PUB) == bobsBalance + math.floor(valueLocked/10)
     assert True
     

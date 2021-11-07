@@ -20,7 +20,7 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     uint8 th = 5;
 
     // Check verticals
-    uint8 verticalCounter = 1;
+    uint8 verticalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x][y+shift] == turn) {
             verticalCounter++;
@@ -31,7 +31,6 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
             break;
         }
     }
-    verticalCounter--;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x][y-shift] == turn) {
             verticalCounter++;
@@ -48,7 +47,7 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     }
 
     // Check horizontals
-    uint8 horizontalCounter = 1;
+    uint8 horizontalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x+shift][y] == turn) {
             horizontalCounter++;
@@ -59,7 +58,6 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
             break;
         }
     }
-    horizontalCounter--;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x-shift][y] == turn) {
             horizontalCounter++;
@@ -79,7 +77,7 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     // x00
     // 0x0
     // 00x
-    uint8 firstDiagonalCounter = 1;
+    uint8 firstDiagonalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x-shift][y+shift] == turn) {
             firstDiagonalCounter++;
@@ -90,7 +88,6 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
             break;
         }
     }
-    firstDiagonalCounter--;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x+shift][y-shift] == turn) {
             firstDiagonalCounter++;
@@ -110,7 +107,7 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
     // 00x 
     // 0x0
     // x00 
-    uint8 secondDiagonalCounter = 1;
+    uint8 secondDiagonalCounter = 0;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x+shift][y+shift] == turn) {
             secondDiagonalCounter++;
@@ -121,7 +118,6 @@ function checkWinner(mapping(uint8 => mapping(uint8 => T.Role)) storage moves, u
             break;
         }
     }
-    secondDiagonalCounter--;
     for (uint8 shift=0; shift<=th; shift++) {
         if (moves[x-shift][y-shift] == turn) {
             secondDiagonalCounter++;
@@ -151,7 +147,7 @@ contract GameInstance {
     T.State private _state;
 
     modifier fromDMNK {
-        require(msg.sender == address(_parent));
+        require(msg.sender == address(_parent), "This method is available to the root DMNK contract only.");
         _;
     }
 
@@ -170,11 +166,21 @@ contract GameInstance {
         return _participants[role];
     }
 
+    // Get the game's status
+    function getStatus() external view returns(T.GameStatus) {
+        return _state.status;
+    }
+
+    // Get the the total value locked
+    function getLockedValue() external view returns(uint256) {
+        return _participants[T.Role.Alice].deposit + _participants[T.Role.Bob].deposit;
+    }
+
     function makeMove(uint8 x, uint8 y) external {
         // First check, that the game is actually running
         require(
             _state.status == T.GameStatus.Running,
-            "This game has not been started yet."
+            "This game is not GameStatus.Running."
         );
         // If it is running, check that the caller is elidable to call
         require(
