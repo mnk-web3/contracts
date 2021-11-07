@@ -18,7 +18,7 @@ BOBS_PUB = Web3.toChecksumAddress("0xda4566317090ba89d8d88f5b5fcdb34d8aab87fd")
 NUMBER_OF_PREPAYED_WALLETS = 2
 
 
-def waitForTransaction(w3, txHash: str, pollTime: float = 0.2, retries: int = 100) -> None:
+def wait_for_transaction(w3, txHash: str, pollTime: float = 0.2, retries: int = 100) -> None:
     currentlyRetried = 0
     while True:
         try:
@@ -74,13 +74,13 @@ def prepayedWallets(w3):
 
     # prefil wallets
     for (main, operational) in wallets:
-        waitForTransaction(
+        wait_for_transaction(
             w3,
             w3.eth.send_raw_transaction(
                 w3.eth.account.sign_transaction(
                     {
                         "chainId": 1666700000,
-                        "gas": 7 * 10 ** 6,
+                        "gas": 2 * 10 ** 6,
                         "gasPrice": 10 ** 9,
                         "nonce": nonce,
                         "from": BOBS_PUB,
@@ -91,13 +91,13 @@ def prepayedWallets(w3):
                 ).rawTransaction)
         )
         nonce += 1
-        waitForTransaction(
+        wait_for_transaction(
             w3,
             w3.eth.send_raw_transaction(
                 w3.eth.account.sign_transaction(
                     {
                         "chainId": 1666700000,
-                        "gas": 7 * 10 ** 6,
+                        "gas": 2 * 10 ** 6,
                         "gasPrice": 10 ** 9,
                         "nonce": nonce,
                         "from": BOBS_PUB,
@@ -125,13 +125,13 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
                     "gas": 2 * 10 ** 6,
                     "gasPrice": 10 ** 9,
                     "nonce": 0,
-                    "value": 2*10**15,
+                    "value": 2 * 10 ** 15,
                 },
             ),
             aliceMain.privateKey
         ).rawTransaction
     )
-    waitForTransaction(w3, aliceTxHash)
+    wait_for_transaction(w3, aliceTxHash)
 
     create_event_found = False
     gameAddress = "0x0"
@@ -147,20 +147,20 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
     # Bob joins the game
     bobTxHash = w3.eth.send_raw_transaction(
         w3.eth.account.sign_transaction(
-            dmnkContract.functions.play(bobOp.address, 10**15, 10**16).buildTransaction(
+            dmnkContract.functions.play(bobOp.address, 10 ** 15, 10 ** 16).buildTransaction(
                 {
                     "from": bobMain.address,
                     "chainId": 1666700000,
-                    "gas": 7 * 10 ** 6,
+                    "gas": 2 * 10 ** 6,
                     "gasPrice": 10 ** 9,
                     "nonce": 0,
-                    "value": 2*10**15,
+                    "value": 2 * 10 ** 15,
                 },
             ),
             bobMain.privateKey
         ).rawTransaction
     )
-    waitForTransaction(w3, bobTxHash)
+    wait_for_transaction(w3, bobTxHash)
     return (gameAddress, ((aliceMain, aliceOp), (bobMain, bobOp)))
 
 

@@ -156,6 +156,14 @@ contract GameInstance {
         return _participants[_state.currentTurn].addresses.main;
     }
 
+    function getWinner() external view returns (address) {
+        if (_state.status == T.GameStatus.Complete) {
+            return _participants[_state.currentTurn].addresses.main;
+        } else {
+            return address(0);
+        }
+    }
+
     // Get the main address of the current turn
     function getCell(uint8 x, uint8 y) external view returns(T.Role) {
         return _moves[x][y];
