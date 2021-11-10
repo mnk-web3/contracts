@@ -1,14 +1,12 @@
-import { Account } from "web3-core";
+import { Component, FunctionComponent, useState, useRef } from "react";
+import { Navbar, Container, Button, Form } from "react-bootstrap";
+import { WalletBase } from "web3-core";
+import { LocalstorageKey } from "../constants";
 
+import Overlay from 'react-bootstrap/Overlay'
+import Popover from 'react-bootstrap/Popover'
 
-import { Component } from "react";
-import { Navbar, Container, Button } from "react-bootstrap";
-
-
-export type WalletProvider = {
-  isConnected: boolean;
-  onConnectionSuccess: () => void;
-};
+import Web3 from "web3";
 
 
 function shortenAddress(address: string): string {
@@ -16,44 +14,117 @@ function shortenAddress(address: string): string {
 };
 
 
-type OnConnect = {
-  onConnectionSuccess: () => void;
+type CommonProps = {
+  web3Instance: Web3,
+  getWallet: () => WalletBase | null,
+  setWallet: (wallet: WalletBase) => void,
+}
+
+const CreateWallet: FunctionComponent<CommonProps> = (props) => {
+  return (
+    <Button onClick={
+      () => {
+        let newWallet = props.web3Instance.eth.accounts.wallet.create(1);
+        newWallet.save("123");
+        props.setWallet(newWallet);
+      }}>
+      <i className="bi bi-plus-square-fill"></i>
+    </Button>
+  )
 }
 
 
-export class ConnectToMetamask extends Component<OnConnect, any> {
-  constructor(props: OnConnect) {
+const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
+  const [popoverVisible, setVisible] = useState(false);
+  const [currentInput, setInput] = useState("");
+  const [isPasswordValid, setValid] = useState(true);
+  const [target, setTarget] = useState(null);
+  const ref = useRef(null);
+
+  const handleClick = (event: any) => {
+    setVisible(!popoverVisible);
+    setTarget(event.target);
+  };
+
+  return (
+    <div ref={ref}>
+      <Button onClick={handleClick} variant="warning">
+        <i className="bi bi-unlock-fill"></i>
+      </Button>
+      <Overlay
+        show={popoverVisible}
+        target={target}
+        placement="bottom"
+        container={ref}
+        containerPadding={20}
+      >
+        <Popover id="popover-contained">
+          <Popover.Header as="h3">
+            <i className="bi bi-unlock-fill"></i>
+          </Popover.Header>
+          <Popover.Body>
+            <Form.Group className="mb-3" controlId="formBasicPassword">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Password"
+                isValid={isPasswordValid}
+                onChange={(event) => { setInput(event.target.value) }}
+                onKeyUp={
+                  (event) => {
+                    if (event.key == "Enter") {
+                      try {
+                        props.setWallet(
+                          props.web3Instance.eth.accounts.wallet.load(currentInput)
+                        );
+                      } catch {
+                        setValid(false);
+                      }
+                    }
+                  }
+                }
+              />
+            </Form.Group>
+          </Popover.Body>
+        </Popover>
+      </Overlay>
+    </div>
+  )
+}
+
+
+const WalletUnknown: FunctionComponent<CommonProps> = (props) => {
+  if (window.localStorage.getItem(LocalstorageKey) == undefined) {
+    return <CreateWallet {...props} />
+  } else {
+    return <UnlockWallet {...props} />
+  }
+}
+
+
+const WalletDetails: FunctionComponent<CommonProps> = (props) => {
+  return <Button>{shortenAddress(props.getWallet()![0].address)}</Button>
+}
+
+
+export class Wallet extends Component<CommonProps, any> {
+  constructor(props: CommonProps) {
     super(props);
   }
 
-  attemptToConnect = () => {
-    (window.ethereum as any)
-      .request({ method: "eth_requestAccounts" })
-      .then(
-        (accounts: string[]) => { this.props.onConnectionSuccess() }
-      )
-  }
-
-  render() {
-    return <Button variant="light" onClick={this.attemptToConnect}>Connect to metamask</Button>
-  }
-}
-
-
-export class WalletDetails extends Component {
   render() {
     return (
-      <Button variant="light">
-        Connected: {shortenAddress((window.ethereum as any).selectedAddress as string)}
-      </Button>
+      this.props.getWallet() == null
+        ? <WalletUnknown {...this.props} />
+        : <WalletDetails {...this.props} />
     )
   }
 }
 
 
-export class DMNKNavbar extends Component<WalletProvider, any> {
+export class DMNKNavbar extends Component<CommonProps, any> {
 
-  constructor(props: WalletProvider) {
+  constructor(props: CommonProps) {
     super(props);
   }
 
@@ -61,16 +132,14 @@ export class DMNKNavbar extends Component<WalletProvider, any> {
     return (
       <Navbar bg="dark" variant="dark">
         <Container>
-          <Navbar.Brand>{`DMNK <3 Harmony`}</Navbar.Brand>
+          <Navbar.Brand>
+            D
+            <i className="bi bi-controller"></i>
+            NK
+          </Navbar.Brand>
           <Navbar.Toggle />
           <Navbar.Collapse className="justify-content-end">
-            {
-              this.props.isConnected
-                ? < WalletDetails />
-                : < ConnectToMetamask
-                  onConnectionSuccess={this.props.onConnectionSuccess}
-                />
-            }
+            < Wallet {...this.props} />
           </Navbar.Collapse>
         </Container>
       </Navbar>
