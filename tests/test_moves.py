@@ -42,9 +42,9 @@ def do_the_move(w3, game, wallet, x, y, nonce):
 
 @pytest.mark.parametrize("moves,whoWins", CASES)
 def test_moves(moves, whoWins, w3, dmnkContract, gameContract, twoPlayers):
-    _, ((_, aliceOp), (_, bobOp)) = twoPlayers
-    nonceAlice = w3.eth.getTransactionCount(aliceOp.address)
-    nonceBob = w3.eth.getTransactionCount(bobOp.address)
+    _, (alice, bob) = twoPlayers
+    nonceAlice = w3.eth.getTransactionCount(alice.address)
+    nonceBob = w3.eth.getTransactionCount(bob.address)
     valueLocked = gameContract.functions.getLockedValue().call()
     bobsBalance = w3.eth.get_balance(BOBS_PUB)
 
@@ -56,10 +56,10 @@ def test_moves(moves, whoWins, w3, dmnkContract, gameContract, twoPlayers):
     # Main game sequence
     for (index, (x, y)) in enumerate(moves):
         if index % 2 == 0:
-            do_the_move(w3, gameContract, aliceOp, x, y, nonceAlice)
+            do_the_move(w3, gameContract, alice, x, y, nonceAlice)
             nonceAlice += 1
         else:
-            do_the_move(w3, gameContract, bobOp, x, y, nonceBob)
+            do_the_move(w3, gameContract, bob, x, y, nonceBob)
             nonceBob += 1
 
     # Search for the GameFinished event

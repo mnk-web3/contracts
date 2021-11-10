@@ -10,18 +10,13 @@ enum GameStatus {
     Aborted
 }
 
-struct AddressPair {
-    address payable main;
-    address operational;
-}
-
 struct LookupResult {
     address game;
     bool success;
 }
 
 struct Participant {
-    AddressPair addresses;
+    address addr;
     uint256 deposit;
     uint256 range_from;
     uint256 range_to;

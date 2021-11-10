@@ -70,10 +70,10 @@ def dmnkContract(w3, dmnkABI):
 @pytest.fixture(scope="function")
 def prepayedWallets(w3):
     nonce = w3.eth.get_transaction_count(BOBS_PUB)
-    wallets = [(w3.eth.account.create(), w3.eth.account.create()) for _ in range(NUMBER_OF_PREPAYED_WALLETS)]
+    wallets = [w3.eth.account.create() for _ in range(NUMBER_OF_PREPAYED_WALLETS)]
 
     # prefil wallets
-    for (main, operational) in wallets:
+    for wallet in wallets:
         wait_for_transaction(
             w3,
             w3.eth.send_raw_transaction(
@@ -84,24 +84,7 @@ def prepayedWallets(w3):
                         "gasPrice": 10 ** 9,
                         "nonce": nonce,
                         "from": BOBS_PUB,
-                        "to": main.address,
-                        "value": 10 ** 17,
-                    },
-                    BOBS_PRIV
-                ).rawTransaction)
-        )
-        nonce += 1
-        wait_for_transaction(
-            w3,
-            w3.eth.send_raw_transaction(
-                w3.eth.account.sign_transaction(
-                    {
-                        "chainId": 1666700000,
-                        "gas": 2 * 10 ** 6,
-                        "gasPrice": 10 ** 9,
-                        "nonce": nonce,
-                        "from": BOBS_PUB,
-                        "to": operational.address,
+                        "to": wallet.address,
                         "value": 10 ** 17,
                     },
                     BOBS_PRIV
@@ -114,13 +97,13 @@ def prepayedWallets(w3):
 
 @pytest.fixture(scope="function")
 def twoPlayers(w3, dmnkContract, prepayedWallets):
-    (aliceMain, aliceOp), (bobMain, bobOp), *_ = prepayedWallets
+    alice, bob, *_ = prepayedWallets
     # Alice joins the game
     aliceTxHash = w3.eth.send_raw_transaction(
         w3.eth.account.sign_transaction(
-            dmnkContract.functions.play(aliceOp.address, 10**15, 10**16).buildTransaction(
+            dmnkContract.functions.play(10**15, 10**16).buildTransaction(
                 {
-                    "from": aliceMain.address,
+                    "from": alice.address,
                     "chainId": 1666700000,
                     "gas": 2 * 10 ** 6,
                     "gasPrice": 10 ** 9,
@@ -128,7 +111,7 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
                     "value": 2 * 10 ** 15,
                 },
             ),
-            aliceMain.privateKey
+            alice.privateKey
         ).rawTransaction
     )
     wait_for_transaction(w3, aliceTxHash)
@@ -139,7 +122,7 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
         fromBlock="latest")
     while not create_event_found:
         for event in create_event_filter.get_all_entries():
-            if event.args.alice == aliceMain.address:
+            if event.args.alice == alice.address:
                 gameAddress = event.args.gameAddress
                 create_event_found = True
         time.sleep(0.2)
@@ -147,9 +130,9 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
     # Bob joins the game
     bobTxHash = w3.eth.send_raw_transaction(
         w3.eth.account.sign_transaction(
-            dmnkContract.functions.play(bobOp.address, 10 ** 15, 10 ** 16).buildTransaction(
+            dmnkContract.functions.play(10 ** 15, 10 ** 16).buildTransaction(
                 {
-                    "from": bobMain.address,
+                    "from": bob.address,
                     "chainId": 1666700000,
                     "gas": 2 * 10 ** 6,
                     "gasPrice": 10 ** 9,
@@ -157,11 +140,11 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
                     "value": 2 * 10 ** 15,
                 },
             ),
-            bobMain.privateKey
+            bob.privateKey
         ).rawTransaction
     )
     wait_for_transaction(w3, bobTxHash)
-    return (gameAddress, ((aliceMain, aliceOp), (bobMain, bobOp)))
+    return (gameAddress, (alice, bob))
 
 
 @pytest.fixture(scope="function")

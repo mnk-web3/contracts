@@ -20,14 +20,15 @@ function enqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
     queue.push(game);
 }
 
-function getFirstPendingGame(
-    GI.GameInstance[] storage queue,
-    T.Participant memory participant
-) view returns (T.LookupResult memory) {
+function getFirstPendingGame (GI.GameInstance[] storage queue, T.Participant memory participant)
+view
+returns (T.LookupResult memory)
+{
     for (uint256 counter = 0; counter < queue.length; counter++) {
         GI.GameInstance game = queue[counter];
         T.Participant memory alice = game.getParticipant(T.Role.Alice);
-        bool condition = (participant.addresses.main != alice.addresses.main &&
+        bool condition = (
+            participant.addr != alice.addr &&
             participant.deposit >= alice.range_from &&
             participant.deposit <= alice.range_to &&
             alice.deposit >= participant.range_from &&
@@ -63,22 +64,22 @@ contract DMNK {
     }
 
     // NOTE: This method can be invoked by the corresponding GameInstance only.
-    function cancel(address payable initiator, uint256 deposit) external {
+    function cancel(address initiator, uint256 deposit) external {
         // msg.sender here is a GameInstance instance
         require(_runningGames[msg.sender], "Game does not exist");
-        (bool successfullInitiatorRefund, ) = initiator.call{value: deposit}("");
+        (bool successfullInitiatorRefund, ) = payable(initiator).call{value: deposit}("");
         require(successfullInitiatorRefund, "Failed to transfer funds.");
         delete _runningGames[msg.sender];
         emit GameCanceled(msg.sender);
     }
 
     // NOTE: This method can be invoked by the corresponding GameInstance only.
-    function complete(address payable winner, uint256 gain) external {
+    function complete(address winner, uint256 gain) external {
         // msg.sender here is a GameInstance instance
         require(_runningGames[msg.sender], "Game does not exist");
         uint256 goesToHouse = gain / 10;
         uint256 goesToWinner = gain - goesToHouse;
-        (bool successWinnerTransfer, ) = winner.call{value: goesToWinner}("");
+        (bool successWinnerTransfer, ) = payable(winner).call{value: goesToWinner}("");
         (bool successHouseTransfer, ) = _minter.call{value: goesToHouse}("");
         require(
             successWinnerTransfer && successHouseTransfer,
@@ -88,11 +89,11 @@ contract DMNK {
         emit GameFinished(msg.sender);
     }
 
-    function play(address operational, uint256 range_from, uint256 range_to) public payable {
+    function play(uint256 range_from, uint256 range_to) public payable {
         require(msg.value <= range_to && msg.value >= range_from);
 
         T.Participant memory participant = T.Participant({
-            addresses: T.AddressPair(payable(msg.sender), operational),
+            addr: payable(msg.sender),
             deposit: msg.value,
             range_from: range_from,
             range_to: range_to
@@ -110,15 +111,15 @@ contract DMNK {
             _runningGames[address(game)] = true;
             emit GameStarted({
                 gameAddress: address(game),
-                alice: game.getParticipant(T.Role.Alice).addresses.main,
-                bob: game.getParticipant(T.Role.Bob).addresses.main,
+                alice: game.getParticipant(T.Role.Alice).addr,
+                bob: game.getParticipant(T.Role.Bob).addr,
                 currentTurn: game.getCurrentTurn()
             });
         } else {
             GI.GameInstance game = new GI.GameInstance(participant);
             // Add the game to waiting queue
             enqGame(_pendingQueue, game);
-            emit GameCreated(address(game), participant.addresses.main);
+            emit GameCreated(address(game), participant.addr);
         }
     }
 

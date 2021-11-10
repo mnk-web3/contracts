@@ -164,12 +164,12 @@ contract GameInstance {
 
     // Get the main address of the current turn
     function getCurrentTurn() external view returns (address) {
-        return _participants[_state.currentTurn].addresses.main;
+        return _participants[_state.currentTurn].addr;
     }
 
     function getWinner() external view returns (address) {
         if (_state.status == T.GameStatus.Complete) {
-            return _participants[_state.currentTurn].addresses.main;
+            return _participants[_state.currentTurn].addr;
         } else {
             return address(0);
         }
@@ -209,8 +209,7 @@ contract GameInstance {
         );
         // If it is running, check that the caller is elidable to call
         require(
-            _participants[_state.currentTurn].addresses.operational ==
-                msg.sender,
+            _participants[_state.currentTurn].addr == msg.sender,
             "This is not your turn, bud."
         );
         // Check that the move is inbounds
@@ -232,7 +231,7 @@ contract GameInstance {
         if (checkWinner(_moves, x, y, _state.currentTurn)) {
             _state.status = T.GameStatus.Complete;
             _parent.complete({
-                winner: payable(_participants[_state.currentTurn].addresses.main),
+                winner: payable(_participants[_state.currentTurn].addr),
                 gain: getLockedValue()
             });
         } else {
@@ -259,7 +258,7 @@ contract GameInstance {
             "You can only cancel a pending game."
         );
         require(
-            msg.sender == _participants[T.Role.Alice].addresses.main,
+            msg.sender == _participants[T.Role.Alice].addr,
             "You are not the Alice, who are you stranger?"
         );
         T.Participant storage alice = _participants[T.Role.Alice];
@@ -267,7 +266,7 @@ contract GameInstance {
 
         // Asking the main DMNK contract to remove the game from
         // the running map and release locked funds
-        _parent.cancel(alice.addresses.main, alice.deposit);
+        _parent.cancel(alice.addr, alice.deposit);
     }
 
     constructor(T.Participant memory alice) {
@@ -275,10 +274,7 @@ contract GameInstance {
         _participants[T.Role.Alice] = alice;
         // Store the dummy player for the Bob role
         _participants[T.Role.Bob] = T.Participant({
-            addresses: T.AddressPair({
-                main: payable(address(0)),
-                operational: address(0)
-            }),
+            addr: address(0),
             range_from: 0,
             range_to: 0,
             deposit: 0
