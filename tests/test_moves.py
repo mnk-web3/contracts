@@ -50,6 +50,9 @@ def test_moves(moves, whoWins, w3, dmnkContract, gameContract, twoPlayers):
 
     addressFirstTurn = gameContract.functions.getCurrentTurn().call()
 
+    # assert the game is running now
+    assert gameContract.functions.getStatus().call() == 1
+
     # Main game sequence
     for (index, (x, y)) in enumerate(moves):
         if index % 2 == 0:
@@ -66,6 +69,9 @@ def test_moves(moves, whoWins, w3, dmnkContract, gameContract, twoPlayers):
         for event in gameCompletedEvent.get_all_entries():
             if event.args.gameAddress == gameContract.address:
                 eventFound = True
+
+    # assert the game is complete now
+    assert gameContract.functions.getStatus().call() == 2
 
     amountGoesToHouse = math.floor(valueLocked/10)
     amountGoesToWinner = valueLocked - amountGoesToHouse

@@ -1,0 +1,27 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+.navbar-brand {
+  font-family: "Titillium Web", sans-serif !important;
+}
+
+
+.logo {
+    font-weight: bold;
+    color: black;
+}
+
+
+.btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+*::selection {
+  background-color:black !important;
+  color: white;
+}

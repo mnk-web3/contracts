@@ -1,42 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
-
 import "./GameInstance.sol" as GI;
 import "./Types.sol" as T;
 
-
+// Removes the game from the pending queue and seals the resulting hole
 function deqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
-    for (uint256 counter=0; counter < queue.length; counter++) {
+    for (uint256 counter = 0; counter < queue.length; counter++) {
         if (queue[counter] == game) {
-            for (uint index = counter; index < queue.length - 1; index++){
-                queue[index] = queue[index+1];
+            for (uint256 index = counter; index < queue.length - 1; index++) {
+                queue[index] = queue[index + 1];
             }
             queue.pop();
         }
     }
 }
 
-
 function enqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
     queue.push(game);
 }
 
-
-function getFirstPendingGame(GI.GameInstance[] storage queue, T.Participant memory participant)
-    view
-    returns(T.LookupResult memory)
-{
-    for (uint256 counter=0; counter < queue.length; counter++) {
+function getFirstPendingGame(
+    GI.GameInstance[] storage queue,
+    T.Participant memory participant
+) view returns (T.LookupResult memory) {
+    for (uint256 counter = 0; counter < queue.length; counter++) {
         GI.GameInstance game = queue[counter];
         T.Participant memory alice = game.getParticipant(T.Role.Alice);
-        bool condition = (
-            participant.addresses.main != alice.addresses.main &&
+        bool condition = (participant.addresses.main != alice.addresses.main &&
             participant.deposit >= alice.range_from &&
             participant.deposit <= alice.range_to &&
             alice.deposit >= participant.range_from &&
-            alice.deposit <= participant.range_to
-        );
+            alice.deposit <= participant.range_to);
         if (condition) {
             return T.LookupResult({game: address(game), success: true});
         }
@@ -44,9 +39,7 @@ function getFirstPendingGame(GI.GameInstance[] storage queue, T.Participant memo
     return T.LookupResult({game: address(0), success: false});
 }
 
-
 contract DMNK {
-
     // DMNK owner
     address payable _minter;
 
@@ -56,41 +49,59 @@ contract DMNK {
 
     // Events
     event GameCreated(address gameAddress, address alice);
-    event GameStarted(address gameAddress, address alice, address bob, address currentTurn);
+    event GameStarted(
+        address gameAddress,
+        address alice,
+        address bob,
+        address currentTurn
+    );
     event GameFinished(address gameAddress);
+    event GameCanceled(address gameAddress);
 
-    function getQueueLength() view public returns(uint256) {
+    function getQueueLength() public view returns (uint256) {
         return _pendingQueue.length;
     }
 
+    // NOTE: This method can be invoked by the corresponding GameInstance only.
+    function cancel(address payable initiator, uint256 deposit) external {
+        // msg.sender here is a GameInstance instance
+        require(_runningGames[msg.sender], "Game does not exist");
+        (bool successfullInitiatorRefund, ) = initiator.call{value: deposit}("");
+        require(successfullInitiatorRefund, "Failed to transfer funds.");
+        delete _runningGames[msg.sender];
+        emit GameCanceled(msg.sender);
+    }
+
+    // NOTE: This method can be invoked by the corresponding GameInstance only.
     function complete(address payable winner, uint256 gain) external {
         // msg.sender here is a GameInstance instance
         require(_runningGames[msg.sender], "Game does not exist");
         uint256 goesToHouse = gain / 10;
         uint256 goesToWinner = gain - goesToHouse;
-        (bool successWinnerTransfer,) = winner.call{value: goesToWinner}("");
-        (bool successHouseTransfer,) = _minter.call{value: goesToHouse}("");
-        require(successWinnerTransfer && successHouseTransfer, "Failed to transfer funds.");
+        (bool successWinnerTransfer, ) = winner.call{value: goesToWinner}("");
+        (bool successHouseTransfer, ) = _minter.call{value: goesToHouse}("");
+        require(
+            successWinnerTransfer && successHouseTransfer,
+            "Failed to transfer funds."
+        );
         delete _runningGames[msg.sender];
         emit GameFinished(msg.sender);
     }
 
-    function play(address operational, uint256 range_from, uint256 range_to)
-        public
-        payable
-    {
+    function play(address operational, uint256 range_from, uint256 range_to) public payable {
         require(msg.value <= range_to && msg.value >= range_from);
 
-        T.Participant memory participant = T.Participant(
-            {
-                addresses: T.AddressPair(payable(msg.sender), operational),
-                deposit: msg.value,
-                range_from: range_from,
-                range_to: range_to
-            }
+        T.Participant memory participant = T.Participant({
+            addresses: T.AddressPair(payable(msg.sender), operational),
+            deposit: msg.value,
+            range_from: range_from,
+            range_to: range_to
+        });
+        T.LookupResult memory result = getFirstPendingGame(
+            _pendingQueue,
+            participant
         );
-        T.LookupResult memory result = getFirstPendingGame(_pendingQueue, participant);
-    
+
         if (result.success) {
             GI.GameInstance game = GI.GameInstance(result.game);
             game.joinAsBob(participant);

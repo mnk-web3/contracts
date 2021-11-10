@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
-
 import "./GameInstance.sol" as GI;
-
 
 enum GameStatus {
     Pending,
     Running,
-    Complete
+    Complete,
+    Aborted
 }
 
 struct AddressPair {
@@ -29,7 +28,9 @@ struct Participant {
 }
 
 enum Role {
-    Unknown, Alice, Bob
+    Unknown,
+    Alice,
+    Bob
 }
 
 struct Move {
@@ -40,4 +41,5 @@ struct Move {
 struct State {
     Role currentTurn;
     GameStatus status;
+    uint256 lastMoveBlockNum;
 }
