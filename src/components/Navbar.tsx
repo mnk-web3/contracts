@@ -67,6 +67,7 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
               <Form.Label>Password</Form.Label>
               <Form.Control
                 type="password"
+                autoFocus={true}
                 placeholder="Password"
                 isValid={isPasswordValid}
                 onChange={(event) => { setInput(event.target.value) }}
