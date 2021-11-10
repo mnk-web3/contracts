@@ -1,5 +1,5 @@
 import { Component, FunctionComponent, useState, useRef } from "react";
-import { Navbar, Container, Button, Form } from "react-bootstrap";
+import { Navbar, Container, Button, Form, OverlayTrigger } from "react-bootstrap";
 import { WalletBase } from "web3-core";
 import { LocalstorageKey } from "../constants";
 
@@ -39,57 +39,54 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
   const [currentInput, setInput] = useState("");
   const [isPasswordValid, setValid] = useState(true);
   const [target, setTarget] = useState(null);
-  const ref = useRef(null);
 
-  const handleClick = (event: any) => {
-    setVisible(!popoverVisible);
-    setTarget(event.target);
-  };
-
-  return (
-    <div ref={ref}>
-      <Button onClick={handleClick} variant="warning">
+  const popover =
+    <Popover id="popover-contained">
+      <Popover.Header as="h3">
         <i className="bi bi-unlock-fill"></i>
-      </Button>
-      <Overlay
-        show={popoverVisible}
-        target={target}
-        placement="bottom"
-        container={ref}
-        containerPadding={20}
-      >
-        <Popover id="popover-contained">
-          <Popover.Header as="h3">
-            <i className="bi bi-unlock-fill"></i>
-          </Popover.Header>
-          <Popover.Body>
-            <Form.Group className="mb-3" controlId="formBasicPassword">
-              <Form.Label>Password</Form.Label>
-              <Form.Control
-                type="password"
-                autoFocus={true}
-                placeholder="Password"
-                isValid={isPasswordValid}
-                onChange={(event) => { setInput(event.target.value) }}
-                onKeyUp={
-                  (event) => {
-                    if (event.key == "Enter") {
-                      try {
-                        props.setWallet(
-                          props.web3Instance.eth.accounts.wallet.load(currentInput)
-                        );
-                      } catch {
-                        setValid(false);
-                      }
-                    }
+      </Popover.Header>
+      <Popover.Body>
+        <Form.Group className="mb-3" controlId="formBasicPassword">
+          <Form.Label>
+            Passphrase:
+          </Form.Label>
+          <Form.Control
+            type="password"
+            autoFocus={true}
+            placeholder="Wallet passphrase"
+            value={currentInput}
+            isValid={isPasswordValid}
+            onChange={(event) => { setInput(event.target.value) }}
+            onKeyUp={
+              (event) => {
+                if (event.key == "Enter") {
+                  try {
+                    // Trying to load the wallet with the password provided
+                    props.setWallet(
+                      props.web3Instance.eth.accounts.wallet.load(currentInput)
+                    );
+                  } catch {
+                    setValid(false);
+                    setInput("");
                   }
                 }
-              />
-            </Form.Group>
-          </Popover.Body>
-        </Popover>
-      </Overlay>
-    </div>
+              }
+            }
+          />
+        </Form.Group>
+      </Popover.Body>
+    </Popover>
+  return (
+    <OverlayTrigger
+      placement="bottom"
+      overlay={popover}
+      trigger="click"
+      rootClose
+    >
+      <Button variant="warning">
+        <i className="bi bi-unlock-fill"></i>
+      </Button>
+    </OverlayTrigger>
   )
 }
 
