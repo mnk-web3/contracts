@@ -73,6 +73,7 @@ export class App extends Component<AppProps, AppState> {
       web3Instance: this.props.web3,
       getWallet: (() => { return this.state.wallet }),
       setWallet: ((wallet: WalletBase) => { this.setState({ wallet: wallet }) }),
+      dmnkContract: this.props.dmnkContract,
     }
     return (
       <Container>

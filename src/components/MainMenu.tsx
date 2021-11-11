@@ -1,10 +1,12 @@
-import { Component, FunctionComponent, useState } from "react";
-import { Container, Button, Col, Row, Form } from "react-bootstrap";
-import Stack from "react-bootstrap/Stack";
+import { Component, FunctionComponent, useEffect, useState } from "react";
+import { Container, Button, Col, Row, Form, Stack, Spinner } from "react-bootstrap";
+import { Contract } from "web3-eth-contract";
+
+
 import "./common.css";
 
 
-import { WalletBase } from "web3-core";
+import { Account, WalletBase } from "web3-core";
 import Web3 from "web3";
 
 
@@ -15,6 +17,7 @@ enum CurrentScreen {
 
 type CommonProps = {
   web3Instance: Web3,
+  dmnkContract: Contract,
   getWallet: () => WalletBase | null,
   setWallet: (wallet: WalletBase) => void,
 };
@@ -60,7 +63,7 @@ export const MainScreen: FunctionComponent<
 
 export const SetupMMGame: FunctionComponent<
   {
-    currentWallet: WalletBase | null,
+    currentAccount: Account,
     goBack: () => void,
     goNext: (bid: number, range_from: number, range_to: number) => void,
   }
@@ -104,6 +107,99 @@ export const SetupMMGame: FunctionComponent<
   )
 }
 
+// {
+//     "blockHash": "0x9f38e50c5aec73c530b67ea95b77109572d577554903ae8f7b7f20dc40d6482f",
+//     "blockNumber": 17424819,
+//     "contractAddress": null,
+//     "cumulativeGasUsed": 1984491,
+//     "from": "0xc79e2d0215a5d0aeba939c27a2c0fddbda36832a",
+//     "gasUsed": 1928713,
+//     "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000400000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000004000000000000000000000000000000000000000000000000000000",
+//     "status": true,
+//     "to": "0xd628b705e08f59c2bfe1217801d66f2e5d7d45f0",
+//     "transactionHash": "0x62fa1070e523cae40a1578ae0c7a84a2a0804e2ad967c3050e98f03271bd63ff",
+//     "transactionIndex": 2,
+//     "events": {
+//         "GameCreated": {
+//             "address": "0xd628b705e08f59c2Bfe1217801D66f2e5d7d45F0",
+//             "blockHash": "0x9f38e50c5aec73c530b67ea95b77109572d577554903ae8f7b7f20dc40d6482f",
+//             "blockNumber": 17424819,
+//             "logIndex": 0,
+//             "removed": false,
+//             "transactionHash": "0x62fa1070e523cae40a1578ae0c7a84a2a0804e2ad967c3050e98f03271bd63ff",
+//             "transactionIndex": 2,
+//             "id": "log_12a25878",
+//             "returnValues": {
+//                 "0": "0x4FE6c61AA04F0F3EC49D1Ebb0B2716D8c0164747",
+//                 "1": "0xc79e2D0215a5d0AEbA939c27A2C0fDDBda36832A",
+//                 "gameAddress": "0x4FE6c61AA04F0F3EC49D1Ebb0B2716D8c0164747",
+//                 "alice": "0xc79e2D0215a5d0AEbA939c27A2C0fDDBda36832A"
+//             },
+//             "event": "GameCreated",
+//             "signature": "0xb60d84e37a6658effce28870b1d123cb86f86409df5888679310c0f276e1f5d2",
+//             "raw": {
+//                 "data": "0x0000000000000000000000004fe6c61aa04f0f3ec49d1ebb0b2716d8c0164747000000000000000000000000c79e2d0215a5d0aeba939c27a2c0fddbda36832a",
+//                 "topics": [
+//                     "0xb60d84e37a6658effce28870b1d123cb86f86409df5888679310c0f276e1f5d2"
+//                 ]
+//             }
+//         }
+//     }
+// }
+
+export const WaitMMGame: FunctionComponent<
+  {
+    currentAccount: Account,
+    web3Instance: Web3,
+    gameSettings: GameSettings,
+    contract: Contract,
+    goNext: (bid: number, range_from: number, range_to: number) => void,
+  }
+> = (props) => {
+  const [waitStatus, setWaitStatus] = useState(true)
+  const [gameAddress, setGameAddress] = useState(null)
+  useEffect(
+    () => {
+      props.contract.methods
+        .play(
+          props.web3Instance.utils.toWei(props.gameSettings.range_from.toString()),
+          props.web3Instance.utils.toWei(props.gameSettings.range_to.toString()),
+        )
+        .send(
+          {
+            "from": props.currentAccount.address,
+            "value": props.web3Instance.utils.toWei(props.gameSettings.bid.toString()),
+            "chainId": "1666700000",
+            "gas": "7000000",
+            "gasPrice": "1000000000",
+          }
+        )
+        .on(
+          "receipt",
+          (receipt: any) => {
+            if (receipt.status) {
+              setWaitStatus(false)
+            }
+          }
+        )
+    }
+  )
+  return (
+    waitStatus
+      ?
+      <div>
+        <p>Pending play request</p>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+      :
+      <div>
+        <p>We are connected, baby</p>
+      </div>
+  )
+}
+
 
 type GameSettings = {
   bid: number,
@@ -112,54 +208,59 @@ type GameSettings = {
 }
 
 
-export class DMNKMainMenu extends Component<CommonProps, MainMenuState> {
-  constructor(props: CommonProps) {
-    super(props);
-    this.state = { screen: CurrentScreen.Main, gameSettings: null };
-  }
-  render() {
-    let currentControl;
-    switch (this.state.screen) {
-      case (CurrentScreen.Main): {
-        currentControl =
-          <MainScreen
-            currentWallet={this.props.getWallet()}
-            goNext={() => { this.setState({ screen: CurrentScreen.SetupMMGame }) }}
-            goBack={() => { }}
-          />
-        break;
-      }
-      case (CurrentScreen.SetupMMGame): {
-        currentControl =
-          <SetupMMGame
-            currentWallet={this.props.getWallet()}
-            goNext=
-            {
-              (bid, range_from, range_to) => {
-                this.setState(
-                  {
-                    screen: CurrentScreen.WaitMMGame,
-                    gameSettings: { bid: bid, range_from: range_from, range_to: range_to }
-                  }
-                );
-              }
-            }
-            goBack={() => { this.setState({ screen: CurrentScreen.Main }) }}
-          />
-        break;
-      }
+export const DMNKMainMenu: FunctionComponent<CommonProps> = (props) => {
+  const [currentScreen, setCurrentScreen] = useState(CurrentScreen.Main);
+  const [currentGameSettings, setGameSettings] = useState<GameSettings | null>(null);
+
+  let currentControl;
+  switch (currentScreen) {
+    case (CurrentScreen.Main): {
+      currentControl =
+        <MainScreen
+          currentWallet={props.getWallet()}
+          goNext={() => { setCurrentScreen(CurrentScreen.SetupMMGame) }}
+          goBack={() => { }}
+        />
+      break;
     }
-    return (
-      <Container className="padded">
-        <Row>
-          <Col>
-            {asciiLogo},
-            <Stack gap={2} className="col-md-3 mx-auto">
-              {currentControl}
-            </Stack>
-          </Col>
-        </Row>
-      </Container>
-    );
+    case (CurrentScreen.SetupMMGame): {
+      currentControl =
+        <SetupMMGame
+          currentAccount={props.getWallet()![0]}
+          goNext={
+            (bid, range_from, range_to) => {
+              setCurrentScreen(CurrentScreen.WaitMMGame)
+              setGameSettings({ bid: bid, range_from: range_from, range_to: range_to })
+            }
+          }
+          goBack={() => { setCurrentScreen(CurrentScreen.Main) }}
+        />
+      break;
+    }
+    case (CurrentScreen.WaitMMGame): {
+      currentControl =
+        <WaitMMGame
+          web3Instance={props.web3Instance}
+          currentAccount={props.getWallet()![0]}
+          gameSettings={currentGameSettings!}
+          contract={props.dmnkContract}
+          goNext={
+            () => { }
+          }
+        />
+      break;
+    }
   }
+  return (
+    <Container className="padded">
+      <Row>
+        <Col>
+          {asciiLogo}
+          <Stack gap={2} className="col-md-3 mx-auto">
+            {currentControl}
+          </Stack>
+        </Col>
+      </Row>
+    </Container>
+  );
 }
