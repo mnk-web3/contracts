@@ -4,7 +4,7 @@ import { DMNKNavbar } from "./components/Navbar";
 import { DMNKMainMenu } from "./components/MainMenu";
 import Web3 from "web3";
 import detectEthereumProvider from "@metamask/detect-provider";
-import { Account, WalletBase } from "web3-core";
+import { WalletBase } from "web3-core";
 
 
 enum NetworkType {
@@ -62,13 +62,15 @@ export class App extends Component<any, AppState> {
     }
   }
   render() {
+    const commonProps = {
+      web3Instance: this.state.web3Instance,
+      getWallet: (() => { return this.state.wallet }),
+      setWallet: ((wallet: WalletBase) => { this.setState({ wallet: wallet }) }),
+    }
     return (
       <Container>
-        <DMNKNavbar
-          web3Instance={this.state.web3Instance}
-          getWallet={() => { return this.state.wallet }}
-          setWallet={(wallet: WalletBase) => { this.setState({ wallet: wallet }) }}
-        />
+        <DMNKNavbar {...commonProps} />
+        <DMNKMainMenu {...commonProps} />
       </Container>
     );
   }

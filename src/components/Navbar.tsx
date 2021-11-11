@@ -3,8 +3,9 @@ import { Navbar, Container, Button, Form, OverlayTrigger } from "react-bootstrap
 import { WalletBase } from "web3-core";
 import { LocalstorageKey } from "../constants";
 
-import Overlay from 'react-bootstrap/Overlay'
-import Popover from 'react-bootstrap/Popover'
+import Overlay from "react-bootstrap/Overlay"
+import Popover from "react-bootstrap/Popover"
+import QRCode from "qrcode.react";
 
 import Web3 from "web3";
 
@@ -18,7 +19,8 @@ type CommonProps = {
   web3Instance: Web3,
   getWallet: () => WalletBase | null,
   setWallet: (wallet: WalletBase) => void,
-}
+};
+
 
 const CreateWallet: FunctionComponent<CommonProps> = (props) => {
   return (
@@ -31,14 +33,12 @@ const CreateWallet: FunctionComponent<CommonProps> = (props) => {
       <i className="bi bi-plus-square-fill"></i>
     </Button>
   )
-}
+};
 
 
 const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
-  const [popoverVisible, setVisible] = useState(false);
   const [currentInput, setInput] = useState("");
   const [isPasswordValid, setValid] = useState(true);
-  const [target, setTarget] = useState(null);
 
   const popover =
     <Popover id="popover-contained">
@@ -101,7 +101,30 @@ const WalletUnknown: FunctionComponent<CommonProps> = (props) => {
 
 
 const WalletDetails: FunctionComponent<CommonProps> = (props) => {
-  return <Button>{shortenAddress(props.getWallet()![0].address)}</Button>
+  const account = props.getWallet()![0];
+
+  const popover =
+    <Popover id="popover-contained">
+      <Popover.Header as="h3">
+        <i className="bi bi-boxes"></i> Address details:
+      </Popover.Header>
+      <Popover.Body>
+        <QRCode value={account.address}></QRCode>
+      </Popover.Body>
+    </Popover>
+
+  return (
+    <OverlayTrigger
+      placement="bottom"
+      overlay={popover}
+      trigger="click"
+      rootClose
+    >
+      < Button variant="light" >
+        Address: <strong>{shortenAddress(account.address)} <i className="bi bi-boxes"></i></strong>
+      </Button >
+    </OverlayTrigger>
+  )
 }
 
 

@@ -4,13 +4,24 @@ import Stack from "react-bootstrap/Stack";
 import "./common.css";
 
 
+import Web3 from "web3";
+import { WalletBase } from "web3-core";
+
+
 enum CurrentScreen {
   Main, CreateGame,
 }
 
 
+type CommonProps = {
+  web3Instance: Web3,
+  getWallet: () => WalletBase | null,
+  setWallet: (wallet: WalletBase) => void,
+};
+
+
+
 type MainMenuState = { screen: CurrentScreen };
-type MainMenuProps = { isConnected: Boolean, onPlay: () => void };
 
 
 const asciiLogo = <pre className="col-md-7 mx-auto logo">{`
@@ -27,8 +38,8 @@ const asciiLogo = <pre className="col-md-7 mx-auto logo">{`
 </pre>
 
 
-export class DMNKMainMenu extends Component<MainMenuProps, MainMenuState> {
-  constructor(props: MainMenuProps) {
+export class DMNKMainMenu extends Component<CommonProps, MainMenuState> {
+  constructor(props: CommonProps) {
     super(props);
     this.state = { screen: CurrentScreen.Main };
   }
@@ -41,7 +52,7 @@ export class DMNKMainMenu extends Component<MainMenuProps, MainMenuState> {
             onClick={() => { this.setState({ screen: CurrentScreen.CreateGame }); }}
             variant="outline-dark"
             size="lg"
-            disabled={!this.props.isConnected}
+            disabled={this.props.getWallet() == null}
           >Play matchmaking
           </Button>
         break;
@@ -50,12 +61,12 @@ export class DMNKMainMenu extends Component<MainMenuProps, MainMenuState> {
         currentControl =
           <>
             <Button
-              onClick={this.props.onPlay} variant="dark" size="lg"
+              variant="outline-dark" size="lg"
             >Play
             </Button>
             <Button
               onClick={() => { this.setState({ screen: CurrentScreen.Main }); }}
-              variant="dark"
+              variant="outline-dark"
               size="lg"
             >Back
             </Button>
