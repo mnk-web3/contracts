@@ -5,12 +5,9 @@ export type PlayGameState = {
   deposit: number;
 };
 
-export default class PlayGameModal extends Component<any, PlayGameState> {
+export default class CreateWalletModal extends Component<any, PlayGameState> {
   constructor(props: any) {
     super(props);
-    this.state = {
-      deposit: 0,
-    };
   }
 
   render() {

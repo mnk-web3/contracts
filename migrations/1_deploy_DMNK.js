@@ -1,34 +1,36 @@
 const fs = require("fs");
-const DMNK = artifacts.require("DMNK");
 
+const DMNK = artifacts.require("DMNK");
 const { getAddress } = require("@harmony-js/crypto");
-const web3 = require("web3");
 
 module.exports = function (deployer, network, accounts) {
   return deployer.deploy(DMNK).then(function () {
     // Dump needful information to file
+    const infoArtifact = JSON.stringify({
+      address: getAddress(DMNK.address).raw,
+      network: network,
+    });
+    // Need this file for pytest suit
+    fs.writeFileSync("./build/info.json", infoArtifact);
+
+    // Syncing deploy info artifact to the UI src
     fs.writeFileSync(
-      "./build/info.json",
-      JSON.stringify({
-        address: getAddress(DMNK.address).raw,
-        network: network,
-      })
+      "./src/artifacts/deployInfoDMNK.ts",
+      "export const deployInfo = " + infoArtifact
     );
-    fs.copyFile("./build/info.json", "./public/info.json", (err) => {
-      if (err) throw err;
-      console.log("Error: failed to copy info.json file.");
-    });
-    fs.copyFile("./build/contracts/DMNK.json", "./public/DMNK.json", (err) => {
-      if (err) throw err;
-      console.log("Error: failed to copy DMNK.json file.");
-    });
-    fs.copyFile(
-      "./build/contracts/GameInstance.json",
-      "./public/GameInstance.json",
-      (err) => {
-        if (err) throw err;
-        console.log("Error: failed to copy GameInstance.json file.");
-      }
+
+    // Syncing DMNK's build info artifact to the UI src
+    fs.writeFileSync(
+      "./src/artifacts/buildInfoDMNK.ts",
+      "export const buildInfo = " +
+        fs.readFileSync("./build/contracts/DMNK.json")
+    );
+
+    // Syncing DMNK's build info artifact to the UI src
+    fs.writeFileSync(
+      "./src/artifacts/buildInfoGameInstance.ts",
+      "export const buildInfo = " +
+        fs.readFileSync("./build/contracts/GameInstance.json")
     );
   });
 };

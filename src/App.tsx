@@ -2,9 +2,11 @@ import { Component } from "react";
 import { Container, Navbar } from "react-bootstrap";
 import { DMNKNavbar } from "./components/Navbar";
 import { DMNKMainMenu } from "./components/MainMenu";
-import Web3 from "web3";
-import detectEthereumProvider from "@metamask/detect-provider";
+import { Contract } from "web3-eth-contract";
 import { WalletBase } from "web3-core";
+
+
+import Web3 from "web3";
 
 
 enum NetworkType {
@@ -48,22 +50,27 @@ enum AppScreen {
 
 
 type AppState = {
-  web3Instance: Web3,
   wallet: WalletBase | null,
 }
 
 
-export class App extends Component<any, AppState> {
+export type AppProps = {
+  web3: Web3,
+  dmnkContract: Contract,
+  gameInstanceABI: any,
+}
+
+
+export class App extends Component<AppProps, AppState> {
   constructor(props: any) {
     super(props);
     this.state = {
-      web3Instance: new Web3("https://api.s0.b.hmny.io"),
       wallet: null,
     }
   }
   render() {
     const commonProps = {
-      web3Instance: this.state.web3Instance,
+      web3Instance: this.props.web3,
       getWallet: (() => { return this.state.wallet }),
       setWallet: ((wallet: WalletBase) => { this.setState({ wallet: wallet }) }),
     }

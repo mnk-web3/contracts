@@ -3,7 +3,6 @@ import { Navbar, Container, Button, Form, OverlayTrigger } from "react-bootstrap
 import { WalletBase } from "web3-core";
 import { LocalstorageKey } from "../constants";
 
-import Overlay from "react-bootstrap/Overlay"
 import Popover from "react-bootstrap/Popover"
 import QRCode from "qrcode.react";
 
