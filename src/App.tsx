@@ -62,7 +62,7 @@ export type AppProps = {
 
 
 export class App extends Component<AppProps, AppState> {
-  constructor(props: any) {
+  constructor(props: AppProps) {
     super(props);
     this.state = {
       wallet: null,

@@ -1,5 +1,5 @@
-import { Component, FunctionComponent, useState, useRef } from "react";
-import { Navbar, Container, Button, Form, OverlayTrigger } from "react-bootstrap";
+import { Component, FunctionComponent, useState, useEffect } from "react";
+import { Navbar, Container, Button, Form, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { WalletBase } from "web3-core";
 import { LocalstorageKey } from "../constants";
 
@@ -101,6 +101,23 @@ const WalletUnknown: FunctionComponent<CommonProps> = (props) => {
 
 const WalletDetails: FunctionComponent<CommonProps> = (props) => {
   const account = props.getWallet()![0];
+  const [balance, setBalance] = useState("0");
+
+  useEffect(
+    () => {
+      const id = setInterval(
+        () => {
+          props.web3Instance.eth.getBalance(account.address).then(
+            (currentBalance) => {
+              setBalance(props.web3Instance.utils.fromWei(currentBalance))
+            }
+          )
+        },
+        1000
+      );
+      return () => clearInterval(id);
+    }
+  )
 
   const popover =
     <Popover id="popover-contained">
@@ -108,7 +125,35 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
         <i className="bi bi-boxes"></i> Address details:
       </Popover.Header>
       <Popover.Body>
-        <QRCode value={account.address}></QRCode>
+        <div>
+          <QRCode
+            value={account.address}
+            level="L"
+            style={{
+              marginLeft: "auto",
+              marginRight: "auto",
+              display: "block"
+            }}
+          />
+          <hr style={{borderTop: "2px dotted"}}/>
+          <OverlayTrigger
+            key="address-copy-overlay-trigger"
+            placement="top"
+            overlay={
+              <Tooltip id={"address-copy-overlay-trigger"}>
+                <p>Click to copy the address</p>
+              </Tooltip>
+            }
+          >
+            <p
+              style={{ marginBottom: 0, cursor: "pointer" }}
+              onClick={() => { navigator.clipboard.writeText(account.address).then(() => { }) }
+              }>
+              <strong>Address:</strong> {shortenAddress(account.address)}
+            </p>
+          </OverlayTrigger>
+          <p style={{ marginBottom: 0 }}><strong>Balance</strong>: {balance}</p>
+        </div>
       </Popover.Body>
     </Popover>
 
