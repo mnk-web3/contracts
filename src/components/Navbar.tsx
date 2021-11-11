@@ -135,7 +135,7 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
               display: "block"
             }}
           />
-          <hr style={{borderTop: "2px dotted"}}/>
+          <hr />
           <OverlayTrigger
             key="address-copy-overlay-trigger"
             placement="top"
@@ -153,6 +153,8 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
             </p>
           </OverlayTrigger>
           <p style={{ marginBottom: 0 }}><strong>Balance</strong>: {balance}</p>
+          <hr />
+          <Button variant="outline-dark">Withdraw</Button>
         </div>
       </Popover.Body>
     </Popover>
@@ -198,9 +200,11 @@ export class DMNKNavbar extends Component<CommonProps, any> {
       <Navbar bg="dark" variant="dark">
         <Container>
           <Navbar.Brand>
-            D
-            <i className="bi bi-controller"></i>
-            NK
+            <strong>
+              D
+              <i className="bi bi-controller"></i>
+              NK
+            </strong>
           </Navbar.Brand>
           <Navbar.Toggle />
           <Navbar.Collapse className="justify-content-end">
