@@ -1,6 +1,6 @@
 import { Component } from "react";
 import { Container, Navbar } from "react-bootstrap";
-import { DMNKNavbar } from "./components/Navbar";
+import { DMNKNavbar } from "./components/navbar/Navbar";
 import { DMNKMainMenu } from "./components/MainMenu";
 import { Contract } from "web3-eth-contract";
 import { WalletBase } from "web3-core";

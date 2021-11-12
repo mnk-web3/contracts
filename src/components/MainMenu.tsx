@@ -68,17 +68,17 @@ export const SetupMMGame: FunctionComponent<
     goNext: (bid: number, range_from: number, range_to: number) => void,
   }
 > = (props) => {
-  const [currentBid, setBid] = useState(3);
+  const [currentBid, setBid] = useState(0.4);
   const [currentSlippage, setSlippage] = useState(0.2);
   return (
     <Stack gap={2}>
       <Form.Label>Bid: {currentBid}</Form.Label>
       <Form.Range
-        min={1}
-        max={10}
-        step={1}
+        min="0.2"
+        max="3"
+        step="0.2"
         value={currentBid}
-        onChange={(event) => { setBid(parseInt(event.target.value)) }}
+        onChange={(event) => { setBid(parseFloat(event.target.value)) }}
       />
       <Form.Label>Slippage: {(currentSlippage * 100).toFixed(1)}%</Form.Label>
       <Form.Range
@@ -147,6 +147,20 @@ export const SetupMMGame: FunctionComponent<
 //     }
 // }
 
+
+type GameCreated = {
+  gameAddress: string,
+  transaction: string,
+}
+
+
+type GameFound = {
+  gameAddress: string,
+  transaction: string,
+  opponent: string,
+}
+
+
 export const WaitMMGame: FunctionComponent<
   {
     currentAccount: Account,
@@ -157,7 +171,7 @@ export const WaitMMGame: FunctionComponent<
   }
 > = (props) => {
   const [waitStatus, setWaitStatus] = useState(true)
-  const [gameAddress, setGameAddress] = useState(null)
+  const [connectionResult, setConnectionResult] = useState<GameCreated | GameFound | null>(null)
   useEffect(
     () => {
       props.contract.methods
@@ -178,11 +192,35 @@ export const WaitMMGame: FunctionComponent<
           "receipt",
           (receipt: any) => {
             if (receipt.status) {
+              // Handle new game case
+              if ("GameCreated" in receipt.events) {
+                console.log("New game being created")
+                setConnectionResult(
+                  {
+                    gameAddress: receipt.events.GameCreated.returnValues.gameAddress as string,
+                    transaction: receipt.transactionHash,
+                  }
+                )
+              }
+              else {
+                console.log("Join existing game")
+                console.log(receipt);
+              }
               setWaitStatus(false)
             }
           }
         )
-    }
+        .on(
+          "error",
+          (receipt: any, error: any) => {
+            if (error != undefined) {
+              console.log("Error occured");
+              // handle the error
+            }
+          }
+        )
+    },
+    []
   )
   return (
     waitStatus
@@ -195,7 +233,10 @@ export const WaitMMGame: FunctionComponent<
       </div>
       :
       <div>
-        <p>We are connected, baby</p>
+        <p>New game created: { }</p>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Waiting for opponent...</span>
+        </Spinner>
       </div>
   )
 }

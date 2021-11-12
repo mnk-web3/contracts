@@ -1,7 +1,11 @@
 import { Component, FunctionComponent, useState, useEffect } from "react";
 import { Navbar, Container, Button, Form, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { WalletBase } from "web3-core";
-import { LocalstorageKey } from "../constants";
+import { LocalstorageKey } from "../../constants";
+
+
+import { CreateWallet } from "./CreateWallet";
+
 
 import Popover from "react-bootstrap/Popover"
 import QRCode from "qrcode.react";
@@ -21,22 +25,10 @@ type CommonProps = {
 };
 
 
-const CreateWallet: FunctionComponent<CommonProps> = (props) => {
-  return (
-    <Button onClick={
-      () => {
-        let newWallet = props.web3Instance.eth.accounts.wallet.create(1);
-        newWallet.save("123");
-        props.setWallet(newWallet);
-      }}>
-      <i className="bi bi-plus-square-fill"></i>
-    </Button>
-  )
-};
-
-
 const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
+  // Password field
   const [currentInput, setInput] = useState("");
+  // Is password valid?
   const [isPasswordValid, setValid] = useState(true);
 
   const popover =
@@ -65,6 +57,7 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
                       props.web3Instance.eth.accounts.wallet.load(currentInput)
                     );
                   } catch {
+                    // If the password is not valid, reset the field and try again
                     setValid(false);
                     setInput("");
                   }
@@ -91,11 +84,19 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
 
 
 const WalletUnknown: FunctionComponent<CommonProps> = (props) => {
-  if (window.localStorage.getItem(LocalstorageKey) == undefined) {
-    return <CreateWallet {...props} />
-  } else {
-    return <UnlockWallet {...props} />
-  }
+  return (
+    window.localStorage.getItem(LocalstorageKey) == undefined
+      ? <CreateWallet
+        onCreate={
+          (password: string) => {
+            let newWallet = props.web3Instance.eth.accounts.wallet.create(1);
+            newWallet.save(password);
+            props.setWallet(newWallet);
+          }
+        }
+      />
+      : <UnlockWallet {...props} />
+  )
 }
 
 
@@ -103,20 +104,26 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
   const account = props.getWallet()![0];
   const [balance, setBalance] = useState("0");
 
+  // Refresh the balance value each 500ms
   useEffect(
     () => {
       const id = setInterval(
         () => {
-          props.web3Instance.eth.getBalance(account.address).then(
-            (currentBalance) => {
-              setBalance(props.web3Instance.utils.fromWei(currentBalance))
-            }
-          )
+          props.web3Instance.eth
+            .getBalance(account.address)
+            .then(
+              (currentBalance) => {
+                setBalance(
+                  props.web3Instance.utils.fromWei(currentBalance)
+                )
+              }
+            )
         },
-        1000
+        500
       );
       return () => clearInterval(id);
-    }
+    },
+    []
   )
 
   const popover =
@@ -174,44 +181,31 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
 }
 
 
-export class Wallet extends Component<CommonProps, any> {
-  constructor(props: CommonProps) {
-    super(props);
-  }
-
-  render() {
-    return (
-      this.props.getWallet() == null
-        ? <WalletUnknown {...this.props} />
-        : <WalletDetails {...this.props} />
-    )
-  }
+const Wallet: FunctionComponent<CommonProps> = (props) => {
+  return (
+    props.getWallet() == null
+      ? <WalletUnknown {...props} />
+      : <WalletDetails {...props} />
+  )
 }
 
 
-export class DMNKNavbar extends Component<CommonProps, any> {
-
-  constructor(props: CommonProps) {
-    super(props);
-  }
-
-  render() {
-    return (
-      <Navbar bg="dark" variant="dark">
-        <Container>
-          <Navbar.Brand>
-            <strong>
-              D
-              <i className="bi bi-controller"></i>
-              NK
-            </strong>
-          </Navbar.Brand>
-          <Navbar.Toggle />
-          <Navbar.Collapse className="justify-content-end">
-            < Wallet {...this.props} />
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-    );
-  }
+export const DMNKNavbar: FunctionComponent<CommonProps> = (props) => {
+  return (
+    <Navbar bg="dark" variant="dark">
+      <Container>
+        <Navbar.Brand>
+          <strong>
+            D
+            <i className="bi bi-controller"></i>
+            NK
+          </strong>
+        </Navbar.Brand>
+        <Navbar.Toggle />
+        <Navbar.Collapse className="justify-content-end">
+          < Wallet {...props} />
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
+  );
 }

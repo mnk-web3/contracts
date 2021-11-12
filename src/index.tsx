@@ -11,8 +11,8 @@ import { deployInfo as deployInfoDMNK } from "./artifacts/deployInfoDMNK";
 import { buildInfo as buildInfoGameInstance } from "./artifacts/buildInfoGameInstance";
 
 
-//const web3 = new Web3("https://api.s0.b.hmny.io");
-const web3 = new Web3("wss://ws.s0.pops.one/")
+const web3 = new Web3("https://api.s0.b.hmny.io");
+//const web3 = new Web3("wss://ws.s0.pops.one/")
 
 ReactDOM.render(
   <React.StrictMode>
