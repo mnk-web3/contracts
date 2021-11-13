@@ -4,6 +4,8 @@ check.py
 build/*
 public/*.json
 src/artifacts/*
+*__stories
+*.storybook/*
 
 .DS_STORE
 node_modules
