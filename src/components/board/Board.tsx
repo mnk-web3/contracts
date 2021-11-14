@@ -1,5 +1,6 @@
 import { Component, FunctionComponent, useState, useEffect } from "react";
 import { Button, Row, Stack } from "react-bootstrap";
+import { Map as ImmutableMap, Record } from "immutable";
 
 
 import "./Board.css"
@@ -10,31 +11,53 @@ interface BoardBrops {
   width: number,
 }
 
-
-interface CellProps {
-  position: Position,
-}
-
-
-enum CellState {
-  Free,
-}
-
-
-const Cell: FunctionComponent<CellProps> = (props) => {
-  return (
-    <button className="cell"></button>
-  )
-}
-
-
 interface Position {
   x: number,
   y: number,
 }
 
+interface CellProps {
+  position: Position,
+  state: CellState,
+  claim: () => void,
+}
+
+
+enum CellState {
+  Free, Mine, NotMine
+}
+
+
+function cellStateToString(state: CellState): string {
+  switch (state) {
+    case (CellState.Mine): {
+      return "mine"
+    }
+    case (CellState.NotMine): {
+      return "notMine"
+    }
+    case (CellState.Free): {
+      return "free"
+    }
+  }
+}
+
+
+const Cell: FunctionComponent<CellProps> = (props) => {
+  return (
+    <button
+      className={`cell ${cellStateToString(props.state)}`}
+      onClick={props.claim}
+    >
+    </button>
+  )
+}
+
 
 const Board: FunctionComponent<BoardBrops> = (props) => {
+  const [cellsState, setCellsState] = useState(ImmutableMap<Record<Position>, CellState>())
+  const PositionImmutable = Record<Position>({ x: 0, y: 0 });
+
   return (
     <div className="container">
       {
@@ -42,13 +65,28 @@ const Board: FunctionComponent<BoardBrops> = (props) => {
           .map(
             (_, lineno) => {
               return (
-                <div className="line">
+                <div className="line" key={`line-${lineno}`}>
                   {
                     [...Array(props.width)]
                       .map(
                         (_, colno) => {
                           return (
-                            <Cell position={{x: colno, y: lineno}}/>
+                            <Cell
+                              key={`cell-${lineno}-${colno}`}
+                              position={{ x: colno, y: lineno }}
+                              state={
+                                cellsState.get(PositionImmutable({ x: colno, y: lineno })) || CellState.Free}
+                              claim={
+                                () => {
+                                  setCellsState(
+                                    cellsState.set(
+                                      PositionImmutable({ x: colno, y: lineno }),
+                                      CellState.Mine
+                                    )
+                                  )
+                                }
+                              }
+                            />
                           )
                         }
                       )
@@ -63,4 +101,4 @@ const Board: FunctionComponent<BoardBrops> = (props) => {
 }
 
 
-export default Board;
+export default Board

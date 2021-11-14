@@ -34,4 +34,3 @@ Medium.args = {
   height: 15,
   width: 15
 };
-

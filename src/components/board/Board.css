@@ -14,9 +14,10 @@
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
-  background-color: yellow;
+  background-color: black;
   padding: 20px;
   width: min-content;
+  border-radius: 10px;
 }
 
 .cell {
@@ -24,15 +25,26 @@
   height: var(--cellSize);
   min-width: var(--cellSize);
   min-height: var(--cellSize);
-  border-width: 0;
-  border-radius: 5px;
 
-  background-color: deepskyblue;
+  border-width: 0px;
+  border-radius: 5px;
 
   margin-left: var(--cellMargin);
   margin-right: var(--cellMargin);
 }
 
+.free {
+  background-color: white;
+}
+
+.mine {
+  background-color: orange;
+}
+
+.notMine {
+  background-color: slateblue;
+}
+
 .cell:hover {
-    background-color: pink;
+  background-color: pink;
 }
