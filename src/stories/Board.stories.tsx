@@ -21,7 +21,7 @@ export const Medium = Template.bind({});
 function getLockedValueMock(): Promise<number> {
   return new Promise(
     (resolve, reject) => {
-      setTimeout(() => {resolve(10)}, 1000)
+      setTimeout(() => { resolve(10) }, 1000)
     }
   )
 }
@@ -30,7 +30,7 @@ function getLockedValueMock(): Promise<number> {
 function makeMoveMock(): Promise<boolean> {
   return new Promise(
     (resolve, reject) => {
-      setTimeout(() => {resolve(true)}, 2000)
+      setTimeout(() => { resolve(true) }, 2000)
     }
   )
 }
@@ -39,9 +39,31 @@ function makeMoveMock(): Promise<boolean> {
 function getCurrentTurnMock(): Promise<CurrentTurn> {
   return new Promise(
     (resolve, reject) => {
-      setTimeout(() => {resolve(CurrentTurn.Mine)}, 1000)
+      setTimeout(() => { resolve(CurrentTurn.Mine) }, 1000)
     }
   )
+}
+
+
+function makeOpponentsMoveMock(gridSize: number): (() => Promise<{x: number, y: number}>) {
+  const getOpponentsMoveMock: () => Promise<{x: number, y: number}> = () => {
+    return new Promise(
+      (resolve, _) => {
+        setTimeout(
+          () => {
+            resolve(
+              {
+                x: Math.floor(Math.random() * gridSize),
+                y: Math.floor(Math.random() * gridSize),
+              }
+            )
+          },
+          1000
+        )
+      }
+    )
+  }
+  return getOpponentsMoveMock
 }
 
 
@@ -52,7 +74,8 @@ ActualInGame.args = {
   },
   getLockedValue: getLockedValueMock,
   getCurrentTurn: getCurrentTurnMock,
-  makeMove: makeMoveMock,
+  getOpponentMove: makeOpponentsMoveMock(25),
+  appendMyMove: makeMoveMock,
 };
 
 
@@ -63,7 +86,8 @@ Small.args = {
   },
   getLockedValue: getLockedValueMock,
   getCurrentTurn: getCurrentTurnMock,
-  makeMove: makeMoveMock,
+  getOpponentMove: makeOpponentsMoveMock(5),
+  appendMyMove: makeMoveMock,
 };
 
 
@@ -74,5 +98,6 @@ Medium.args = {
   },
   getLockedValue: getLockedValueMock,
   getCurrentTurn: getCurrentTurnMock,
-  makeMove: makeMoveMock,
+  getOpponentMove: makeOpponentsMoveMock(15),
+  appendMyMove: makeMoveMock,
 };

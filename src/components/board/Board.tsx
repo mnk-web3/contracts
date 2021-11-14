@@ -10,8 +10,8 @@ import "./Board.css"
 interface BoardBrops {
   height: number,
   width: number,
-  addMove: (x: number, y: number) => Promise<boolean>
-  getOpponentMove: () => Promise<{x: number, y: number}>
+  claimCell: (x: number, y: number) => Promise<boolean>
+  getCellState: (x: number, y: number) => CellState
 }
 
 interface Position {
@@ -21,6 +21,7 @@ interface Position {
 
 interface CellProps {
   position: Position,
+  state: CellState,
   tryClaim: () => Promise<boolean>,
 }
 
@@ -49,33 +50,25 @@ function cellStateToString(state: CellState): string {
 
 
 const Cell: FunctionComponent<CellProps> = (props) => {
-  const [cellStateBackup, setCellStateBackup] = useState(CellState.Free)
-  const [cellState, setCellState] = useState(CellState.Free)
-
+  const [clicked, setClicked] = useState(false);
   useEffect(
     () => {
-      if (cellState == CellState.Sync) {
-        props
-          .tryClaim()
-          .then(
-            (claimSuccess) => {
-              claimSuccess
-                ? setCellState(CellState.Mine)
-                : setCellState(cellStateBackup)
-            }
-          )
+      if (clicked) {
+        props.tryClaim().then(
+          (claimResult) => {
+            setClicked(false)
+          }
+        )
       }
     },
-    [cellState]
+    [clicked]
   )
-
   return (
     <button
-      className={`cell ${cellStateToString(cellState)}`}
+      className={`cell ${cellStateToString(props.state)}`}
       onClick={
         () => {
-          setCellStateBackup(cellState)
-          setCellState(CellState.Sync)
+          setClicked(true)
         }
       }
     >
@@ -83,7 +76,7 @@ const Cell: FunctionComponent<CellProps> = (props) => {
   )
 }
 
-const PositionImmutable = Record<Position>({ x: 0, y: 0 });
+const ImmutablePosition = Record<Position>({ x: 0, y: 0 });
 
 
 export const BoardGrid: FunctionComponent<BoardBrops> = (props) => {
@@ -102,10 +95,11 @@ export const BoardGrid: FunctionComponent<BoardBrops> = (props) => {
                           return (
                             <Cell
                               key={`cell-${lineno}-${colno}`}
+                              state={props.getCellState(colno, lineno)}
                               position={{ x: colno, y: lineno }}
                               tryClaim={
                                 async () => {
-                                  return await props.addMove(colno, lineno)
+                                  return await props.claimCell(colno, lineno)
                                 }
                               }
                             />
@@ -132,14 +126,23 @@ interface GameProps {
   dimensions: { width: number, height: number },
   getLockedValue: () => Promise<number>
   getCurrentTurn: () => Promise<CurrentTurn>
-  makeMove: (x: number, y: number) => Promise<boolean>
-  getOpponentMove: () => Promise<{x: number, y: number}>
+  appendMyMove: (x: number, y: number) => Promise<boolean>
+  getOpponentMove: () => Promise<{ x: number, y: number }>
 }
 
 
 export const Board: FunctionComponent<GameProps> = (props) => {
+  // Internal state, that prevents glitchy cell's transitions
+  const [isProcessing, setProcessing] = useState(false);
+
+  // Part of the state, provided by the contract itself
   const [valueLocked, setValueLocked] = useState<number | null>(null);
   const [currentTurn, setCurrentTurn] = useState<CurrentTurn>(CurrentTurn.Unknown);
+
+  // State of the game field
+  const [gridState, setGridState] = (
+    useState<ImmutableMap<Record<Position>, CellState>>(ImmutableMap())
+  )
 
   // Resolve the total funds locked value
   useEffect(
@@ -157,22 +160,54 @@ export const Board: FunctionComponent<GameProps> = (props) => {
     []
   )
 
+  // Resolve opponents move
+  useEffect(
+    () => {
+      if (currentTurn == CurrentTurn.NotMine) {
+        props.getOpponentMove().then(
+          (move) => {
+            console.log(move)
+            setGridState(
+              gridState.set(ImmutablePosition(move), CellState.NotMine)
+            )
+            setCurrentTurn(CurrentTurn.Mine)
+          }
+        )
+      }
+    },
+    [currentTurn]
+  )
+
   return (
     <div className="boardContainer">
-      <p>
-        Funds locked: {valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}
-      </p>
+      <p>Funds locked: {valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}</p>
       <BoardGrid
         width={props.dimensions.width}
         height={props.dimensions.height}
-        getOpponentMove={props.getOpponentMove}
-        addMove={
+        getCellState={
+          (x: number, y: number) => {
+            return gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
+          }
+        }
+        claimCell={
           async (x, y) => {
-            if (currentTurn == CurrentTurn.Mine && await props.makeMove(x, y)) {
-              setCurrentTurn(CurrentTurn.NotMine);
-              return true;
+            const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
+            if (currentTurn == CurrentTurn.Mine && !isProcessing) {
+              setProcessing(true)
+              setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Sync))
+              let valueToReturn: boolean;
+              if (await props.appendMyMove(x, y)) {
+                setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Mine))
+                setCurrentTurn(CurrentTurn.NotMine);
+                valueToReturn = true
+              } else {
+                gridState.set(ImmutablePosition({ x: x, y: y }), cellStateBackup)
+                valueToReturn = false
+              }
+              setProcessing(false)
+              return valueToReturn
             }
-            return false;
+            return false
           }
         }
       />
