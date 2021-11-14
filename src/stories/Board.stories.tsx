@@ -1,7 +1,7 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
 
 
-import Board from "../components/board/Board"
+import { Board, CurrentTurn } from "../components/board/Board"
 
 
 export default {
@@ -18,19 +18,61 @@ export const Small = Template.bind({});
 export const Medium = Template.bind({});
 
 
+function getLockedValueMock(): Promise<number> {
+  return new Promise(
+    (resolve, reject) => {
+      setTimeout(() => {resolve(10)}, 1000)
+    }
+  )
+}
+
+
+function makeMoveMock(): Promise<boolean> {
+  return new Promise(
+    (resolve, reject) => {
+      setTimeout(() => {resolve(true)}, 2000)
+    }
+  )
+}
+
+
+function getCurrentTurnMock(): Promise<CurrentTurn> {
+  return new Promise(
+    (resolve, reject) => {
+      setTimeout(() => {resolve(CurrentTurn.Mine)}, 1000)
+    }
+  )
+}
+
+
 ActualInGame.args = {
-  height: 25,
-  width: 25
+  dimensions: {
+    height: 25,
+    width: 25
+  },
+  getLockedValue: getLockedValueMock,
+  getCurrentTurn: getCurrentTurnMock,
+  makeMove: makeMoveMock,
 };
 
 
 Small.args = {
-  height: 5,
-  width: 5
+  dimensions: {
+    height: 5,
+    width: 5
+  },
+  getLockedValue: getLockedValueMock,
+  getCurrentTurn: getCurrentTurnMock,
+  makeMove: makeMoveMock,
 };
 
 
 Medium.args = {
-  height: 15,
-  width: 15
+  dimensions: {
+    height: 15,
+    width: 15
+  },
+  getLockedValue: getLockedValueMock,
+  getCurrentTurn: getCurrentTurnMock,
+  makeMove: makeMoveMock,
 };

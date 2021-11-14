@@ -1,3 +1,9 @@
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
 :root {
   --cellSize: 25px;
   --cellMargin: 2px;
@@ -10,12 +16,12 @@
   margin-bottom: var(--cellMargin);
 }
 
-.container {
+.gridContainer {
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   background-color: black;
-  padding: 20px;
+  padding: 15px;
   width: min-content;
   border-radius: 10px;
 }
@@ -27,7 +33,7 @@
   min-height: var(--cellSize);
 
   border-width: 0px;
-  border-radius: 5px;
+  border-radius: 7px;
 
   margin-left: var(--cellMargin);
   margin-right: var(--cellMargin);
@@ -43,6 +49,11 @@
 
 .notMine {
   background-color: slateblue;
+}
+
+.sync {
+  background-color: orange;
+  animation: blinker 1s linear infinite;
 }
 
 .cell:hover {
