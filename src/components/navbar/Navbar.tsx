@@ -11,18 +11,23 @@ import Popover from "react-bootstrap/Popover"
 import QRCode from "qrcode.react";
 
 
+export enum AccountResultKind {
+  Exists, NonExists, Locked
+}
+
+
 export type AccountRequestResult =
   {
-    kind: "exists",
+    kind: AccountResultKind.Exists,
     value: Account
   } |
   {
-    kind: "not_exists",
+    kind: AccountResultKind.NonExists,
     value: null
   } |
   {
-    kind: "locked",
-    value: ((password: string) => void)
+    kind: AccountResultKind.Locked
+    value: ((password: string) => boolean)
   }
 
 
@@ -33,7 +38,7 @@ export type NavbarProps = {
 };
 
 
-const AccountUnlock: FunctionComponent<{unlockAccount: (pw: string) => void}> = (props) => {
+const AccountUnlock: FunctionComponent<{ unlockAccount: (password: string) => boolean }> = (props) => {
   // Password field
   const [currentInput, setInput] = useState("");
 
@@ -45,19 +50,17 @@ const AccountUnlock: FunctionComponent<{unlockAccount: (pw: string) => void}> = 
       <Popover.Body>
         <Form.Group className="mb-3" controlId="formBasicPassword">
           <Form.Label>
-            Passphrase:
+            Unlock:
           </Form.Label>
           <Form.Control
             type="password"
             autoFocus={true}
-            placeholder="Wallet passphrase"
+            placeholder="Your password"
             value={currentInput}
             onChange={(event) => { setInput(event.target.value) }}
             onKeyUp={
               (event) => {
-                if (event.key == "Enter") {
-                  props.unlockAccount(currentInput)
-                }
+                (event.key == "Enter") && !props.unlockAccount(currentInput) && setInput("")
               }
             }
           />
@@ -162,13 +165,13 @@ const Wallet: FunctionComponent<NavbarProps> = (props) => {
   const accountHandle = props.getAccount();
 
   switch (accountHandle.kind) {
-    case "exists": {
+    case AccountResultKind.Exists: {
       return <AccountDetails account={accountHandle.value} getBalance={props.getBalance} />
     }
-    case "not_exists": {
+    case AccountResultKind.NonExists: {
       return <AccountCreate onCreate={props.createAccount} />
     }
-    case "locked": {
+    case AccountResultKind.Locked: {
       return <AccountUnlock unlockAccount={accountHandle.value} />
     }
   }

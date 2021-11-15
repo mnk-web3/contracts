@@ -1,6 +1,7 @@
 import { Component, FunctionComponent, useState } from "react";
 import { Container, Navbar } from "react-bootstrap";
-import { DMNKNavbar, NavbarProps } from "./components/navbar/Navbar";
+import { DMNKNavbar, NavbarProps, AccountResultKind } from "./components/navbar/Navbar";
+import { AccountIsNotAvailable } from "./components/WaitScreens";
 import DMNKMainMenu from "./components/MainMenu";
 import { Contract } from "web3-eth-contract";
 import { WalletBase } from "web3-core";
@@ -41,8 +42,8 @@ type AppState = {
 
 
 export type AppProps = {
-  web3: Web3,
-  dmnkContract: Contract,
+  dmnkABI: any,
+  dmnkAddress: string,
   gameInstanceABI: any,
 }
 
@@ -63,48 +64,58 @@ const commonProps = {
 
 
 const App: FunctionComponent<AppProps> = (props) => {
-  const [currentScreen, setCurrentScreen] = useState(CurrentScreen.MainScreen);
+  // const [currentScreen, setCurrentScreen] = useState(CurrentScreen.MainScreen);
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const [web3Instance, setWeb3Instance] = useState(
     networkTypeToWeb3Instance(NetworkType.HarmonyTestnet)
   )
+  // Main dmnk contract instance
+  const [dmnkContract, setDMNKContract] = useState(
+    new web3Instance.eth.Contract(props.dmnkABI, props.dmnkAddress)
+  );
 
-  const commonProps: NavbarProps = {
+  const mainProps: NavbarProps = {
     createAccount: (password: string) => {
-      let newWallet = web3Instance.eth.accounts.wallet.create(1);
+      const newWallet = web3Instance.eth.accounts.wallet.create(1);
       newWallet.save(password);
       setCurrentAccount(newWallet[0]);
     },
     getBalance: async (acc: Account) => {
-      const balance = await web3Instance.eth.getBalance(acc.address)
-      return parseFloat(web3Instance.utils.fromWei(balance))
+      return parseFloat(
+        web3Instance.utils.fromWei(
+          await web3Instance.eth.getBalance(acc.address)
+        )
+      )
     },
     getAccount: () => {
-      // account being created and unlocked
+      // account is there and it is unlocked
       if (currentAccount != null) {
         return {
-          kind: "exists",
+          kind: AccountResultKind.Exists,
           value: currentAccount
         }
       }
       // no account for you, create first
       else if (window.localStorage.getItem(LocalstorageKey) == null) {
         return {
-          kind: "not_exists",
+          kind: AccountResultKind.NonExists,
           value: null
         };
       }
-      // account is there, but it is locked
+      // account is there but it is locked
       else {
         return {
-          kind: "locked",
-          value: (password: string) => {
-            try {
-              setCurrentAccount(web3Instance.eth.accounts.wallet.load(password)[0]);
+          kind: AccountResultKind.Locked,
+          value:
+            (password: string) => {
+              try {
+                setCurrentAccount(web3Instance.eth.accounts.wallet.load(password)[0]);
+                return true
+              }
+              catch {
+                return false
+              }
             }
-            catch {
-            }
-          }
         }
       }
     }
@@ -112,7 +123,15 @@ const App: FunctionComponent<AppProps> = (props) => {
 
   return (
     <Container>
-      <DMNKNavbar {...commonProps} />
+      <DMNKNavbar {...mainProps} />
+      {
+        (currentAccount == null)
+          ? <AccountIsNotAvailable />
+          : <DMNKMainMenu
+            getBalance={async () => { return mainProps.getBalance(currentAccount) }}
+            onGameSettingsReady={(settings) => { }}
+          />
+      }
     </Container>
   );
 }

@@ -126,6 +126,7 @@ export enum CurrentTurn {
 
 interface GameProps {
   dimensions: { width: number, height: number },
+  // Contract related data
   getLockedValue: () => Promise<number>
   getCurrentTurn: () => Promise<CurrentTurn>
   // Moves

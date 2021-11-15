@@ -11,7 +11,7 @@ import Web3 from "web3";
 
 
 enum CurrentScreen {
-  Main, ConstructGame, SetupCusomGame, WaitMMGame,
+  Main, ConstructGame
 }
 
 
@@ -44,23 +44,14 @@ const asciiLogo = <pre className="col-md-7 mx-auto logo">
 
 export const MainScreen: FunctionComponent<
   {
-    goBack: () => void,
     goNext: () => void,
-    getBalance: () => Promise<number | null>,
   }
 > = (props) => {
-  const [currentBalance, setBalance] = useState<number | null>(null);
-  useEffect(
-    () => {
-      props.getBalance().then(setBalance)
-    }
-  )
   return (
     <Button
       onClick={props.goNext}
       variant="outline-dark"
       size="lg"
-      disabled={currentBalance == null}
     >Play matchmaking
     </Button>
   )
@@ -71,7 +62,7 @@ export const GameConstructor: FunctionComponent<
   {
     goBack: () => void,
     goNext: (settings: GameSettings) => void,
-    getBalance: () => Promise<number | null>,
+    getBalance: () => Promise<number>,
   }
 > = (props) => {
   const [currentBid, setBid] = useState(0.4);
@@ -80,9 +71,9 @@ export const GameConstructor: FunctionComponent<
     <Stack gap={2}>
       <Form.Label>Bid: {currentBid}</Form.Label>
       <Form.Range
-        min="0.2"
-        max="3"
-        step="0.2"
+        min={0.2}
+        max={3}
+        step={0.2}
         value={currentBid}
         onChange={(event) => { setBid(parseFloat(event.target.value)) }}
       />
@@ -260,7 +251,7 @@ type GameSettings = {
 
 
 interface MainMenuProps {
-  getBalance: () => Promise<number | null>,
+  getBalance: () => Promise<number>,
   onGameSettingsReady: (settings: GameSettings) => void;
 }
 
@@ -273,8 +264,6 @@ const DMNKMainMenu: FunctionComponent<MainMenuProps> = (props) => {
     case (CurrentScreen.Main): {
       currentControl =
         <MainScreen
-          getBalance={props.getBalance}
-          goBack={() => { }}
           goNext={() => { setCurrentScreen(CurrentScreen.ConstructGame) }}
         />
       break;

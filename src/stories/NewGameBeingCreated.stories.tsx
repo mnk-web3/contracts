@@ -46,7 +46,7 @@ function cancelTheGameMock(): Promise<boolean> {
 
 GameJustCreated.args = {
   getGameSettings: () => { return { bid: 10, range_from: 9.9, range_to: 10.1 } },
-  getContractAddress: getGameAddressMock,
+  getGameAddress: getGameAddressMock,
   cancelGame: cancelTheGameMock,
   proceedAfterCancellation: () => {console.log("Leave this page being clicked")},
 };

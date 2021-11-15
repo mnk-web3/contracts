@@ -11,14 +11,11 @@ import { deployInfo as deployInfoDMNK } from "./artifacts/deployInfoDMNK";
 import { buildInfo as buildInfoGameInstance } from "./artifacts/buildInfoGameInstance";
 
 
-const web3 = new Web3("https://api.s0.b.hmny.io");
-//const web3 = new Web3("wss://ws.s0.pops.one/")
-
 ReactDOM.render(
   <React.StrictMode>
     <App
-      web3={web3}
-      dmnkContract={new web3.eth.Contract(buildInfoDMNK.abi as any, deployInfoDMNK.address)}
+      dmnkABI={buildInfoDMNK.abi}
+      dmnkAddress={deployInfoDMNK.address}
       gameInstanceABI={buildInfoGameInstance.abi as any}
     />
   </React.StrictMode>,

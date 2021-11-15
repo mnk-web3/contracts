@@ -1,7 +1,7 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
 
 
-import { DMNKNavbar } from "../components/navbar/Navbar";
+import { DMNKNavbar, AccountResultKind } from "../components/navbar/Navbar";
 
 
 export default {
@@ -22,7 +22,7 @@ async function getBalanceMock(_: any): Promise<number> {
 
 
 NavbarMain.args = {
-  getAccount: () => {return {kind: "not_exists", value: null}},
+  getAccount: () => {return {kind: AccountResultKind.NonExists, value: null}},
   createAccount: (password: string) => {},
   getBalance: getBalanceMock
 };

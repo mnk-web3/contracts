@@ -8,8 +8,13 @@ enum CancellationStatus {
 }
 
 
+export const AccountIsNotAvailable: FunctionComponent<any> = (props) => {
+  return <p>Create or unlock your account</p>
+}
+
+
 export const NewGameBeingCreated: FunctionComponent<{
-  getContractAddress: () => Promise<string>,
+  getGameAddress: () => Promise<string>,
   getGameSettings: () => { bid: number, range_from: number, range_to: number },
   cancelGame: () => Promise<boolean>,
   proceedAfterCancellation: () => void,
@@ -21,7 +26,7 @@ export const NewGameBeingCreated: FunctionComponent<{
 
     useEffect(
       () => {
-        props.getContractAddress().then(setGameAddress)
+        props.getGameAddress().then(setGameAddress)
       }
     )
 
