@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
-import { App } from "./App";
+import App from "./App";
 import { Contract } from "web3-eth-contract";
 import Web3 from "web3";
 

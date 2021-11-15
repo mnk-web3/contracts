@@ -128,6 +128,7 @@ interface GameProps {
   dimensions: { width: number, height: number },
   getLockedValue: () => Promise<number>
   getCurrentTurn: () => Promise<CurrentTurn>
+  // Moves
   appendMyMove: (x: number, y: number) => Promise<boolean>
   getOpponentMove: () => Promise<{ x: number, y: number }>
 }

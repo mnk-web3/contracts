@@ -9,7 +9,7 @@ type CreateWalletModalProps = {
 }
 
 
-export const CreateWalletModal: FunctionComponent<CreateWalletModalProps> = (props) => {
+export const AccountCreateModal: FunctionComponent<CreateWalletModalProps> = (props) => {
   const [firstPasswordField, setFirstPasswordField] = useState("")
   const [secondPasswordField, setSecondPasswordField] = useState("")
 
@@ -77,7 +77,7 @@ type CreateWalletProps = {
 }
 
 
-export const CreateWallet: FunctionComponent<CreateWalletProps> = (props) => {
+export const AccountCreate: FunctionComponent<CreateWalletProps> = (props) => {
   const [showModal, setShowModal] = useState(false)
 
   return (
@@ -87,17 +87,17 @@ export const CreateWallet: FunctionComponent<CreateWalletProps> = (props) => {
       </Button>
       {/* Unmount the modal and lose all its state on "hide" action */}
       {showModal &&
-        <CreateWalletModal
+        <AccountCreateModal
           show={showModal}
           onHide={() => { setShowModal(false) }}
-          onCreate={props.onCreate}
+          onCreate={
+            (password: string) => {
+              props.onCreate(password)
+              setShowModal(false)
+            }
+          }
         />
       }
     </div>
   )
-}
-
-
-export const Hello: FunctionComponent<any> = (props) => {
-  return <Button variant="primary">More</Button>
 }

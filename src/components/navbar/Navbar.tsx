@@ -1,35 +1,41 @@
-import { Component, FunctionComponent, useState, useEffect } from "react";
+import { FunctionComponent, useState, useEffect } from "react";
 import { Navbar, Container, Button, Form, OverlayTrigger, Tooltip } from "react-bootstrap";
-import { WalletBase } from "web3-core";
-import { LocalstorageKey } from "../../constants";
+import { Account } from "web3-core";
+import { shortenAddress } from "../common";
 
 
-import { CreateWallet } from "./CreateWallet";
+import { AccountCreate } from "./CreateWallet";
 
 
 import Popover from "react-bootstrap/Popover"
 import QRCode from "qrcode.react";
 
-import Web3 from "web3";
+
+export type AccountRequestResult =
+  {
+    kind: "exists",
+    value: Account
+  } |
+  {
+    kind: "not_exists",
+    value: null
+  } |
+  {
+    kind: "locked",
+    value: ((password: string) => void)
+  }
 
 
-function shortenAddress(address: string): string {
-  return address.slice(0, 6) + "..." + address.slice(-4)
+export type NavbarProps = {
+  getBalance: (account: Account) => Promise<number>,
+  getAccount: () => AccountRequestResult,
+  createAccount: (password: string) => void,
 };
 
 
-type CommonProps = {
-  web3Instance: Web3,
-  getWallet: () => WalletBase | null,
-  setWallet: (wallet: WalletBase) => void,
-};
-
-
-const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
+const AccountUnlock: FunctionComponent<{unlockAccount: (pw: string) => void}> = (props) => {
   // Password field
   const [currentInput, setInput] = useState("");
-  // Is password valid?
-  const [isPasswordValid, setValid] = useState(true);
 
   const popover =
     <Popover id="popover-contained">
@@ -46,21 +52,11 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
             autoFocus={true}
             placeholder="Wallet passphrase"
             value={currentInput}
-            isValid={isPasswordValid}
             onChange={(event) => { setInput(event.target.value) }}
             onKeyUp={
               (event) => {
                 if (event.key == "Enter") {
-                  try {
-                    // Trying to load the wallet with the password provided
-                    props.setWallet(
-                      props.web3Instance.eth.accounts.wallet.load(currentInput)
-                    );
-                  } catch {
-                    // If the password is not valid, reset the field and try again
-                    setValid(false);
-                    setInput("");
-                  }
+                  props.unlockAccount(currentInput)
                 }
               }
             }
@@ -83,41 +79,22 @@ const UnlockWallet: FunctionComponent<CommonProps> = (props) => {
 }
 
 
-const WalletUnknown: FunctionComponent<CommonProps> = (props) => {
-  return (
-    window.localStorage.getItem(LocalstorageKey) == undefined
-      ? <CreateWallet
-        onCreate={
-          (password: string) => {
-            let newWallet = props.web3Instance.eth.accounts.wallet.create(1);
-            newWallet.save(password);
-            props.setWallet(newWallet);
-          }
-        }
-      />
-      : <UnlockWallet {...props} />
-  )
-}
-
-
-const WalletDetails: FunctionComponent<CommonProps> = (props) => {
-  const account = props.getWallet()![0];
-  const [balance, setBalance] = useState("0");
+const AccountDetails: FunctionComponent<
+  {
+    account: Account,
+    getBalance: (account: Account) => Promise<number>
+  }
+> = (props) => {
+  const [balance, setBalance] = useState(0)
 
   // Refresh the balance value each 500ms
   useEffect(
     () => {
       const id = setInterval(
         () => {
-          props.web3Instance.eth
-            .getBalance(account.address)
-            .then(
-              (currentBalance) => {
-                setBalance(
-                  props.web3Instance.utils.fromWei(currentBalance)
-                )
-              }
-            )
+          props
+            .getBalance(props.account)
+            .then(setBalance)
         },
         500
       );
@@ -134,7 +111,7 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
       <Popover.Body>
         <div>
           <QRCode
-            value={account.address}
+            value={props.account.address}
             level="L"
             style={{
               marginLeft: "auto",
@@ -154,9 +131,9 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
           >
             <p
               style={{ marginBottom: 0, cursor: "pointer" }}
-              onClick={() => { navigator.clipboard.writeText(account.address).then(() => { }) }
+              onClick={() => { navigator.clipboard.writeText(props.account.address).then(() => { }) }
               }>
-              <strong>Address:</strong> {shortenAddress(account.address)}
+              <strong>Address:</strong> {shortenAddress(props.account.address)}
             </p>
           </OverlayTrigger>
           <p style={{ marginBottom: 0 }}><strong>Balance</strong>: {balance}</p>
@@ -174,23 +151,31 @@ const WalletDetails: FunctionComponent<CommonProps> = (props) => {
       rootClose
     >
       < Button variant="light" >
-        Address: <strong>{shortenAddress(account.address)} <i className="bi bi-boxes"></i></strong>
+        Address: <strong>{shortenAddress(props.account.address)} <i className="bi bi-boxes"></i></strong>
       </Button >
     </OverlayTrigger>
   )
 }
 
 
-const Wallet: FunctionComponent<CommonProps> = (props) => {
-  return (
-    props.getWallet() == null
-      ? <WalletUnknown {...props} />
-      : <WalletDetails {...props} />
-  )
+const Wallet: FunctionComponent<NavbarProps> = (props) => {
+  const accountHandle = props.getAccount();
+
+  switch (accountHandle.kind) {
+    case "exists": {
+      return <AccountDetails account={accountHandle.value} getBalance={props.getBalance} />
+    }
+    case "not_exists": {
+      return <AccountCreate onCreate={props.createAccount} />
+    }
+    case "locked": {
+      return <AccountUnlock unlockAccount={accountHandle.value} />
+    }
+  }
 }
 
 
-export const DMNKNavbar: FunctionComponent<CommonProps> = (props) => {
+export const DMNKNavbar: FunctionComponent<NavbarProps> = (props) => {
   return (
     <Navbar bg="dark" variant="dark">
       <Container>

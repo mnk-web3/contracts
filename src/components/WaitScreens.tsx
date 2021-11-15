@@ -13,7 +13,6 @@ export const NewGameBeingCreated: FunctionComponent<{
   getGameSettings: () => { bid: number, range_from: number, range_to: number },
   cancelGame: () => Promise<boolean>,
   proceedAfterCancellation: () => void,
-  proceedAfterOpponentFound: () => void,
 }> =
   (props) => {
     const [gameAddress, setGameAddress] = useState<string | null>(null)
