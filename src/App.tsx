@@ -1,9 +1,10 @@
-import { Component } from "react";
+import { Component, FunctionComponent, useState } from "react";
 import { Container, Navbar } from "react-bootstrap";
 import { DMNKNavbar } from "./components/navbar/Navbar";
 import { DMNKMainMenu } from "./components/MainMenu";
 import { Contract } from "web3-eth-contract";
 import { WalletBase } from "web3-core";
+
 
 
 import Web3 from "web3";
@@ -61,25 +62,25 @@ export type AppProps = {
 }
 
 
-export class App extends Component<AppProps, AppState> {
-  constructor(props: AppProps) {
-    super(props);
-    this.state = {
-      wallet: null,
-    }
-  }
-  render() {
-    const commonProps = {
-      web3Instance: this.props.web3,
-      getWallet: (() => { return this.state.wallet }),
-      setWallet: ((wallet: WalletBase) => { this.setState({ wallet: wallet }) }),
-      dmnkContract: this.props.dmnkContract,
-    }
-    return (
-      <Container>
-        <DMNKNavbar {...commonProps} />
-        <DMNKMainMenu {...commonProps} />
-      </Container>
-    );
-  }
+enum CurrentScreen {
+  MainScreen, GameScreen
 }
+
+
+const App: FunctionComponent<AppProps> = (props) => {
+  const [currentScreen, setCurrentScreen] = useState(CurrentScreen.MainScreen);
+  const commonProps = {
+    web3Instance: props.web3,
+    getWallet: (() => state.wallet),
+    setWallet: ((wallet: WalletBase) => { setState({ wallet: wallet }) }),
+    dmnkContract: props.dmnkContract,
+  }
+  return (
+    <Container>
+      <DMNKNavbar {...commonProps} />
+      <DMNKMainMenu {...commonProps} />
+    </Container>
+  );
+}
+
+export default App;

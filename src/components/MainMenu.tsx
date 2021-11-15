@@ -11,7 +11,7 @@ import Web3 from "web3";
 
 
 enum CurrentScreen {
-  Main, SetupMMGame, SetupCusomGame, WaitMMGame,
+  Main, ConstructGame, SetupCusomGame, WaitMMGame,
 }
 
 
@@ -44,28 +44,34 @@ const asciiLogo = <pre className="col-md-7 mx-auto logo">
 
 export const MainScreen: FunctionComponent<
   {
-    currentWallet: WalletBase | null,
-    goNext: () => void,
     goBack: () => void,
+    goNext: () => void,
+    getBalance: () => Promise<number | null>,
   }
 > = (props) => {
+  const [currentBalance, setBalance] = useState<number | null>(null);
+  useEffect(
+    () => {
+      props.getBalance().then(setBalance)
+    }
+  )
   return (
     <Button
       onClick={props.goNext}
       variant="outline-dark"
       size="lg"
-      disabled={props.currentWallet == null}
+      disabled={currentBalance == null}
     >Play matchmaking
     </Button>
   )
 }
 
 
-export const SetupMMGame: FunctionComponent<
+export const GameConstructor: FunctionComponent<
   {
-    currentAccount: Account,
     goBack: () => void,
-    goNext: (bid: number, range_from: number, range_to: number) => void,
+    goNext: (settings: GameSettings) => void,
+    getBalance: () => Promise<number | null>,
   }
 > = (props) => {
   const [currentBid, setBid] = useState(0.4);
@@ -92,9 +98,12 @@ export const SetupMMGame: FunctionComponent<
         onClick={
           () =>
             props.goNext(
-              currentBid,
-              (1 - currentSlippage) * currentBid,
-              (1 + currentSlippage) * currentBid)
+              {
+                bid: currentBid,
+                range_from: (1 - currentSlippage) * currentBid,
+                range_to: (1 + currentSlippage) * currentBid,
+              }
+            )
         }
         variant="outline-dark" size="lg"
       >
@@ -103,7 +112,7 @@ export const SetupMMGame: FunctionComponent<
       <Button onClick={props.goBack} variant="outline-dark" size="lg">
         Back
       </Button>
-    </Stack>
+    </Stack >
   )
 }
 
@@ -161,87 +170,88 @@ type GameFound = {
 }
 
 
-export const WaitMMGame: FunctionComponent<
-  {
-    currentAccount: Account,
-    web3Instance: Web3,
-    gameSettings: GameSettings,
-    contract: Contract,
-    goNext: (bid: number, range_from: number, range_to: number) => void,
-  }
-> = (props) => {
-  const [waitStatus, setWaitStatus] = useState(true)
-  const [connectionResult, setConnectionResult] = useState<GameCreated | GameFound | null>(null)
-  useEffect(
-    () => {
-      props.contract.methods
-        .play(
-          props.web3Instance.utils.toWei(props.gameSettings.range_from.toString()),
-          props.web3Instance.utils.toWei(props.gameSettings.range_to.toString()),
-        )
-        .send(
-          {
-            "from": props.currentAccount.address,
-            "value": props.web3Instance.utils.toWei(props.gameSettings.bid.toString()),
-            "chainId": "1666700000",
-            "gas": "7000000",
-            "gasPrice": "1000000000",
-          }
-        )
-        .on(
-          "receipt",
-          (receipt: any) => {
-            if (receipt.status) {
-              // Handle new game case
-              if ("GameCreated" in receipt.events) {
-                console.log("New game being created")
-                setConnectionResult(
-                  {
-                    gameAddress: receipt.events.GameCreated.returnValues.gameAddress as string,
-                    transaction: receipt.transactionHash,
-                  }
-                )
-              }
-              else {
-                console.log("Join existing game")
-                console.log(receipt);
-              }
-              setWaitStatus(false)
-            }
-          }
-        )
-        .on(
-          "error",
-          (receipt: any, error: any) => {
-            if (error != undefined) {
-              console.log("Error occured");
-              // handle the error
-            }
-          }
-        )
-    },
-    []
-  )
-  return (
-    waitStatus
-      ?
-      <div>
-        <p>Pending play request</p>
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      </div>
-      :
-      <div>
-        <p>New game created: { }</p>
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Waiting for opponent...</span>
-        </Spinner>
-      </div>
-  )
-}
+// export const WaitMMGame: FunctionComponent<
+//   {
+//     currentAccount: Account,
+//     web3Instance: Web3,
+//     gameSettings: GameSettings,
+//     contract: Contract,
+//     goNext: (bid: number, range_from: number, range_to: number) => void,
+//   }
+// > = (props) => {
+//   const [waitStatus, setWaitStatus] = useState(true)
+//   const [connectionResult, setConnectionResult] = useState<GameCreated | GameFound | null>(null)
+//   useEffect(
+//     () => {
+//       props.contract.methods
+//         .play(
+//           props.web3Instance.utils.toWei(props.gameSettings.range_from.toString()),
+//           props.web3Instance.utils.toWei(props.gameSettings.range_to.toString()),
+//         )
+//         .send(
+//           {
+//             "from": props.currentAccount.address,
+//             "value": props.web3Instance.utils.toWei(props.gameSettings.bid.toString()),
+//             "chainId": "1666700000",
+//             "gas": "7000000",
+//             "gasPrice": "1000000000",
+//           }
+//         )
+//         .on(
+//           "receipt",
+//           (receipt: any) => {
+//             if (receipt.status) {
+//               // Handle new game case
+//               if ("GameCreated" in receipt.events) {
+//                 console.log("New game being created")
+//                 setConnectionResult(
+//                   {
+//                     gameAddress: receipt.events.GameCreated.returnValues.gameAddress as string,
+//                     transaction: receipt.transactionHash,
+//                   }
+//                 )
+//               }
+//               else {
+//                 console.log("Join existing game")
+//                 console.log(receipt);
+//               }
+//               setWaitStatus(false)
+//             }
+//           }
+//         )
+//         .on(
+//           "error",
+//           (receipt: any, error: any) => {
+//             if (error != undefined) {
+//               console.log("Error occured");
+//               // handle the error
+//             }
+//           }
+//         )
+//     },
+//     []
+//   )
+//   return (
+//     waitStatus
+//       ?
+//       <div>
+//         <p>Pending play request</p>
+//         <Spinner animation="border" role="status">
+//           <span className="visually-hidden">Loading...</span>
+//         </Spinner>
+//       </div>
+//       :
+//       <div>
+//         <p>New game created: { }</p>
+//         <Spinner animation="border" role="status">
+//           <span className="visually-hidden">Waiting for opponent...</span>
+//         </Spinner>
+//       </div>
+//   )
+// }
 
 
+// This is what expected to come out of the game constructor
 type GameSettings = {
   bid: number,
   range_from: number,
@@ -249,45 +259,32 @@ type GameSettings = {
 }
 
 
-export const DMNKMainMenu: FunctionComponent<CommonProps> = (props) => {
+interface MainMenuProps {
+  getBalance: () => Promise<number | null>,
+  onGameSettingsReady: (settings: GameSettings) => void;
+}
+
+
+const DMNKMainMenu: FunctionComponent<MainMenuProps> = (props) => {
   const [currentScreen, setCurrentScreen] = useState(CurrentScreen.Main);
-  const [currentGameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
   let currentControl;
   switch (currentScreen) {
     case (CurrentScreen.Main): {
       currentControl =
         <MainScreen
-          currentWallet={props.getWallet()}
-          goNext={() => { setCurrentScreen(CurrentScreen.SetupMMGame) }}
+          getBalance={props.getBalance}
           goBack={() => { }}
+          goNext={() => { setCurrentScreen(CurrentScreen.ConstructGame) }}
         />
       break;
     }
-    case (CurrentScreen.SetupMMGame): {
+    case (CurrentScreen.ConstructGame): {
       currentControl =
-        <SetupMMGame
-          currentAccount={props.getWallet()![0]}
-          goNext={
-            (bid, range_from, range_to) => {
-              setCurrentScreen(CurrentScreen.WaitMMGame)
-              setGameSettings({ bid: bid, range_from: range_from, range_to: range_to })
-            }
-          }
+        <GameConstructor
+          getBalance={props.getBalance}
+          goNext={props.onGameSettingsReady}
           goBack={() => { setCurrentScreen(CurrentScreen.Main) }}
-        />
-      break;
-    }
-    case (CurrentScreen.WaitMMGame): {
-      currentControl =
-        <WaitMMGame
-          web3Instance={props.web3Instance}
-          currentAccount={props.getWallet()![0]}
-          gameSettings={currentGameSettings!}
-          contract={props.dmnkContract}
-          goNext={
-            () => { }
-          }
         />
       break;
     }
@@ -305,3 +302,6 @@ export const DMNKMainMenu: FunctionComponent<CommonProps> = (props) => {
     </Container>
   );
 }
+
+
+export default DMNKMainMenu;

@@ -37,7 +37,7 @@ function cellStateToString(state: CellState): string {
       return "mine"
     }
     case (CellState.NotMine): {
-      return "notMine"
+      return "notMine fadein"
     }
     case (CellState.Free): {
       return "free"
@@ -54,11 +54,13 @@ const Cell: FunctionComponent<CellProps> = (props) => {
   useEffect(
     () => {
       if (clicked) {
-        props.tryClaim().then(
-          (claimResult) => {
-            setClicked(false)
-          }
-        )
+        props
+          .tryClaim()
+          .then(
+            (_) => {
+              setClicked(false)
+            }
+          )
       }
     },
     [clicked]
@@ -81,7 +83,7 @@ const ImmutablePosition = Record<Position>({ x: 0, y: 0 });
 
 export const BoardGrid: FunctionComponent<BoardBrops> = (props) => {
   return (
-    <div className="gridContainer">
+    <div className="gridContainer fadein">
       {
         [...Array(props.height)]
           .map(
@@ -166,7 +168,6 @@ export const Board: FunctionComponent<GameProps> = (props) => {
       if (currentTurn == CurrentTurn.NotMine) {
         props.getOpponentMove().then(
           (move) => {
-            console.log(move)
             setGridState(
               gridState.set(ImmutablePosition(move), CellState.NotMine)
             )
@@ -178,9 +179,28 @@ export const Board: FunctionComponent<GameProps> = (props) => {
     [currentTurn]
   )
 
+  const renderCurrentTurnMemo = (turn: CurrentTurn) => {
+    switch (turn) {
+      case (CurrentTurn.Unknown): {
+        return (
+          <p>Turn:
+            <Spinner animation="border" size="sm" />
+          </p>
+        )
+      }
+      case (CurrentTurn.Mine): {
+        return <p>Turn: <strong>me</strong></p>
+      }
+      case (CurrentTurn.NotMine): {
+        return <p>Turn: <strong>opponent</strong></p>
+      }
+    }
+  }
+
   return (
     <div className="boardContainer">
-      <p>Funds locked: {valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}</p>
+      <p>Funds locked: <strong>{valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}</strong></p>
+      {renderCurrentTurnMemo(currentTurn)}
       <BoardGrid
         width={props.dimensions.width}
         height={props.dimensions.height}
@@ -191,11 +211,11 @@ export const Board: FunctionComponent<GameProps> = (props) => {
         }
         claimCell={
           async (x, y) => {
-            const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
             if (currentTurn == CurrentTurn.Mine && !isProcessing) {
+              const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
+              let valueToReturn: boolean;
               setProcessing(true)
               setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Sync))
-              let valueToReturn: boolean;
               if (await props.appendMyMove(x, y)) {
                 setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Mine))
                 setCurrentTurn(CurrentTurn.NotMine);
