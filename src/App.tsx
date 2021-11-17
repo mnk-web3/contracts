@@ -1,13 +1,15 @@
-import { Component, FunctionComponent, useState } from "react";
-import { Container, Navbar } from "react-bootstrap";
+import { FunctionComponent, useState } from "react";
+import { Container } from "react-bootstrap";
 import { DMNKNavbar, NavbarProps, AccountResultKind } from "./components/navbar/Navbar";
-import { AccountIsNotAvailable } from "./components/WaitScreens";
-import DMNKMainMenu from "./components/MainMenu";
+import {
+  AccountIsNotAvailable, WaitingForContractPlayReaction,
+  PlayResponse, PlayEventKind, GameCreatedResponse, GameFoundResponse
+}
+  from "./components/WaitScreens";
+import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
 import { Contract } from "web3-eth-contract";
-import { WalletBase } from "web3-core";
 import { LocalstorageKey } from "./constants";
 import { Account } from "web3-core";
-
 
 
 import Web3 from "web3";
@@ -31,13 +33,11 @@ function networkTypeToWeb3Instance(networkType: NetworkType): Web3 {
 }
 
 
-enum AppScreen {
-  Main, GamePending, GameRunning
-}
-
-
-type AppState = {
-  wallet: WalletBase | null,
+enum CurrentScreen {
+  Main,
+  WaitingForPlayResponse,
+  GamePending,
+  GamePlaying
 }
 
 
@@ -48,24 +48,10 @@ export type AppProps = {
 }
 
 
-enum CurrentScreen {
-  MainScreen,
-  GameScreen
-}
-
-
-const commonProps = {
-  getAccount: () => {
-    if (window.localStorage.getItem(LocalstorageKey) == null) {
-      return null;
-    }
-  }
-}
-
-
 const App: FunctionComponent<AppProps> = (props) => {
-  // const [currentScreen, setCurrentScreen] = useState(CurrentScreen.MainScreen);
+  const [currentScreen, setCurrentScreen] = useState(CurrentScreen.Main);
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
+  const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [web3Instance, setWeb3Instance] = useState(
     networkTypeToWeb3Instance(NetworkType.HarmonyTestnet)
   )
@@ -109,6 +95,7 @@ const App: FunctionComponent<AppProps> = (props) => {
           value:
             (password: string) => {
               try {
+                // wallet.load will raise an exception on the wrong password
                 setCurrentAccount(web3Instance.eth.accounts.wallet.load(password)[0]);
                 return true
               }
@@ -127,10 +114,54 @@ const App: FunctionComponent<AppProps> = (props) => {
       {
         (currentAccount == null)
           ? <AccountIsNotAvailable />
-          : <DMNKMainMenu
-            getBalance={async () => { return mainProps.getBalance(currentAccount) }}
-            onGameSettingsReady={(settings) => { }}
-          />
+          : (
+            (currentScreen === CurrentScreen.Main)
+              ? (
+                <DMNKMainMenu
+                  getBalance={async () => { return mainProps.getBalance(currentAccount) }}
+                  onGameSettingsReady={
+                    (settings) => {
+                      setCurrentScreen(CurrentScreen.WaitingForPlayResponse)
+                      setGameSettings(settings)
+                    }
+                  }
+                />
+              )
+              : (
+                (currentScreen === CurrentScreen.WaitingForPlayResponse)
+                  ? (
+                    <WaitingForContractPlayReaction
+                      onGameCreated={
+                        (response) => {
+                          setCurrentScreen(CurrentScreen.GamePending)
+                        }
+                      }
+                      onGameFound={
+                        (response) => {
+                          setCurrentScreen(CurrentScreen.GamePlaying)
+                        }
+                      }
+                      playResponse={
+                        dmnkContract
+                          .methods
+                          .play(
+                            web3Instance.utils.toWei(gameSettings!.range_from.toString()),
+                            web3Instance.utils.toWei(gameSettings!.range_to.toString()),
+                          )
+                          .send(
+                            {
+                              "from": currentAccount!.address,
+                              "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
+                              "gas": "5000000",
+                              "gasPrice": "1000000000",
+                            },
+                          )
+                      }
+                    />
+                  )
+                  : <p>This part is not implemented yet</p>
+              )
+          )
       }
     </Container>
   );

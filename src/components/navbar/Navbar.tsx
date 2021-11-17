@@ -60,6 +60,7 @@ const AccountUnlock: FunctionComponent<{ unlockAccount: (password: string) => bo
             onChange={(event) => { setInput(event.target.value) }}
             onKeyUp={
               (event) => {
+                // Try to unlock the wallet on Enter pressed
                 (event.key == "Enter") && !props.unlockAccount(currentInput) && setInput("")
               }
             }

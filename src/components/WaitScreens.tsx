@@ -1,6 +1,7 @@
-import { Component, FunctionComponent, useState, useEffect } from "react";
-import { Button, Row, Stack, Spinner } from "react-bootstrap";
+import { FunctionComponent, useState, useEffect } from "react";
+import { Button, Spinner } from "react-bootstrap";
 import { shortenAddress } from "./common"
+import "./common.css"
 
 
 enum CancellationStatus {
@@ -58,6 +59,90 @@ export const NewGameBeingCreated: FunctionComponent<{
               Leave this page
             </Button>
         }
+      </div>
+    )
+  }
+
+
+
+export enum PlayEventKind {
+  GameCreated, GameFound
+}
+
+
+export type GameCreatedResponse =
+  {
+    kind: PlayEventKind.GameCreated,
+    gameAddress: string,
+  }
+
+
+export type GameFoundResponse =
+  {
+    kind: PlayEventKind.GameFound,
+    gameAddress: string,
+    opponentAddress: string,
+  }
+
+
+export type PlayResponse = GameCreatedResponse | GameFoundResponse
+
+
+function receiptToPlayResponse(receipt: any): PlayResponse {
+  if ("GameCreated" in receipt.events) {
+    // GameCreated case
+    const gameCreatedEvent = receipt.events.GameCreated;
+    return { kind: PlayEventKind.GameCreated, gameAddress: gameCreatedEvent.returnValues.gameAddress }
+  }
+  else {
+    // GameStarted case
+    const gameStartedEvent = receipt.events.GameStarted;
+    return {
+      kind: PlayEventKind.GameFound,
+      gameAddress: gameStartedEvent.returnValues.gameAddress,
+      opponentAddress: gameStartedEvent.returnValues.bob,
+    }
+  }
+}
+
+
+export const WaitingForContractPlayReaction:
+  FunctionComponent<
+    {
+      playResponse: Promise<any>,
+      onGameCreated: (response: GameCreatedResponse) => void,
+      onGameFound: (response: GameFoundResponse) => void,
+    }>
+  = (props) => {
+    useEffect(
+      () => {
+        (props.playResponse as any)
+          .once("sending", (info: any) => { console.log("sending", info) })
+          .once("sent", (info: any) => { console.log("sent", info) })
+          .once("transactionHash", (info: any) => { console.log("hash", info) })
+          .once(
+            "receipt",
+            (receipt: any) => {
+              const response = receiptToPlayResponse(receipt)
+              switch (response.kind) {
+                case (PlayEventKind.GameCreated): {
+                  props.onGameCreated(response)
+                  break
+                }
+                case (PlayEventKind.GameFound): {
+                  props.onGameFound(response)
+                  break
+                }
+              }
+            }
+          )
+      },
+      []
+    )
+    return (
+      <div>
+        <Spinner animation="border" />
+        <p>Negotiating with the DMNK contract...</p>
       </div>
     )
   }

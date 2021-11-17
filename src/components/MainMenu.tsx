@@ -1,4 +1,4 @@
-import { Component, FunctionComponent, useEffect, useState } from "react";
+import { Component, FunctionComponent, useEffect, useRef, useState } from "react";
 import { Container, Button, Col, Row, Form, Stack, Spinner } from "react-bootstrap";
 import { Contract } from "web3-eth-contract";
 
@@ -65,16 +65,29 @@ export const GameConstructor: FunctionComponent<
     getBalance: () => Promise<number>,
   }
 > = (props) => {
+  const [bidMax, setBidMax] = useState(3);
   const [currentBid, setBid] = useState(0.4);
   const [currentSlippage, setSlippage] = useState(0.2);
+
+  useEffect(
+    () => {
+      props.getBalance().then(
+        (balance) => {
+          Math.min(bidMax, balance)
+        }
+      )
+    },
+    []
+  )
+
   return (
     <Stack gap={2}>
       <Form.Label>Bid: {currentBid}</Form.Label>
       <Form.Range
         min={0.2}
-        max={3}
+        max={bidMax}
         step={0.2}
-        value={currentBid}
+        value={Math.min(currentBid, bidMax)}
         onChange={(event) => { setBid(parseFloat(event.target.value)) }}
       />
       <Form.Label>Slippage: {(currentSlippage * 100).toFixed(1)}%</Form.Label>
@@ -243,7 +256,7 @@ type GameFound = {
 
 
 // This is what expected to come out of the game constructor
-type GameSettings = {
+export type GameSettings = {
   bid: number,
   range_from: number,
   range_to: number,

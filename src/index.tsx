@@ -12,12 +12,10 @@ import { buildInfo as buildInfoGameInstance } from "./artifacts/buildInfoGameIns
 
 
 ReactDOM.render(
-  <React.StrictMode>
-    <App
-      dmnkABI={buildInfoDMNK.abi}
-      dmnkAddress={deployInfoDMNK.address}
-      gameInstanceABI={buildInfoGameInstance.abi as any}
-    />
-  </React.StrictMode>,
+  <App
+    dmnkABI={buildInfoDMNK.abi}
+    dmnkAddress={deployInfoDMNK.address}
+    gameInstanceABI={buildInfoGameInstance.abi as any}
+  />,
   document.getElementById("root")
 );
