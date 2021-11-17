@@ -266,7 +266,7 @@ contract GameInstance {
 
         // Asking the main DMNK contract to remove the game from
         // the running map and release locked funds
-        _parent.cancel(alice.addr, alice.deposit);
+        _parent.cancel(msg.sender, alice.deposit);
     }
 
     constructor(T.Participant memory alice) {

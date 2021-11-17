@@ -106,15 +106,17 @@ function receiptToPlayResponse(receipt: any): PlayResponse {
 export const WaitingForContractPlayReaction:
   FunctionComponent<
     {
-      playResponse: Promise<any>,
+      // Protect the Promise object by the means of lambda abstraction =)
+      getPlayResponse: () => Promise<any>,
       onGameCreated: (response: GameCreatedResponse) => void,
       onGameFound: (response: GameFoundResponse) => void,
     }>
   = (props) => {
     useEffect(
       () => {
-        (props.playResponse as any)
-          .then(
+        (props.getPlayResponse() as any)
+          .once(
+            "receipt",
             (receipt: any) => {
               const response = receiptToPlayResponse(receipt)
               switch (response.kind) {

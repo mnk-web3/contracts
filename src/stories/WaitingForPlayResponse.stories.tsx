@@ -28,5 +28,5 @@ function getPlayResponse(): Promise<PlayResponse> {
 Main.args = {
   onGameCreated: (response) => {},
   onGameFound: (response) => {},
-  playResponse: getPlayResponse(),
+  getPlayResponse: () => getPlayResponse(),
 };

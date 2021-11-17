@@ -7,7 +7,7 @@ import {
 }
   from "./components/WaitScreens";
 import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
-import { Contract } from "web3-eth-contract";
+import { Board, CurrentTurn } from "./components/board/Board";
 import { LocalstorageKey } from "./constants";
 import { Account } from "web3-core";
 
@@ -129,31 +129,32 @@ const App: FunctionComponent<AppProps> = (props) => {
         <WaitingForContractPlayReaction
           onGameCreated={
             (response) => {
-              console.log("Game created")
               setGameAddress(response.gameAddress)
               setCurrentScreen(CurrentScreen.GamePending)
             }
           }
           onGameFound={
             (response) => {
+              setGameAddress(response.gameAddress)
               setCurrentScreen(CurrentScreen.GamePlaying)
             }
           }
-          playResponse={
-            dmnkContract
-              .methods
-              .play(
-                web3Instance.utils.toWei(gameSettings!.range_from.toString()),
-                web3Instance.utils.toWei(gameSettings!.range_to.toString()),
-              )
-              .send(
-                {
-                  "from": currentAccount!.address,
-                  "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
-                  "gas": "5000000",
-                  "gasPrice": "1000000000",
-                },
-              )
+          getPlayResponse={
+            () =>
+              dmnkContract
+                .methods
+                .play(
+                  web3Instance.utils.toWei(gameSettings!.range_from.toString()),
+                  web3Instance.utils.toWei(gameSettings!.range_to.toString()),
+                )
+                .send(
+                  {
+                    "from": currentAccount!.address,
+                    "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
+                    "gas": "5000000",
+                    "gasPrice": "1000000000",
+                  },
+                )
           }
         />
       break
@@ -171,22 +172,61 @@ const App: FunctionComponent<AppProps> = (props) => {
           cancelGame={
             async () => {
               const receipt: any = (
-                await (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
-                  .methods
-                  .cancel()
-                  .send(
-                    {
-                      "from": currentAccount!.address,
-                      "gas": "5000000",
-                      "gasPrice": "1000000000",
-                    }
-                  )
+                await
+                  (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                    .methods
+                    .cancel()
+                    .send(
+                      {
+                        "from": currentAccount!.address,
+                        "gas": "5000000",
+                        "gasPrice": "1000000000",
+                      }
+                    )
               )
               return receipt.status
             }
           }
         />
       break
+    }
+    case (CurrentScreen.GamePlaying): {
+      currentComponent =
+        <Board
+          dimensions={{ width: 25, height: 25 }}
+          getLockedValue={
+            async () => {
+              const valueAsWEI = await
+                (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                  .methods
+                  .getLockedValue()
+                  .call()
+              return parseFloat(web3Instance.utils.fromWei(valueAsWEI))
+            }
+          }
+          getCurrentTurn={
+            async () => {
+              const currentAddress = await
+                (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                  .methods
+                  .getCurrentTurn()
+                  .call()
+              return (currentAddress == currentAccount!.address) ? CurrentTurn.Mine : CurrentTurn.NotMine
+            }
+          }
+          appendMyMove={
+            async (x, y) => {
+              // implement me
+              return true
+            }
+          }
+          getOpponentMove={
+            async () => {
+              // implement me
+              return { x: 10, y: 20 }
+            }
+          }
+        />
     }
   }
 
