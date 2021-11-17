@@ -15,21 +15,14 @@ export const AccountIsNotAvailable: FunctionComponent<any> = (props) => {
 
 
 export const NewGameBeingCreated: FunctionComponent<{
-  getGameAddress: () => Promise<string>,
-  getGameSettings: () => { bid: number, range_from: number, range_to: number },
+  gameAddress: string,
+  gameSettings: { bid: number, range_from: number, range_to: number },
   cancelGame: () => Promise<boolean>,
   proceedAfterCancellation: () => void,
 }> =
   (props) => {
-    const [gameAddress, setGameAddress] = useState<string | null>(null)
     const [cancellationRequested, setCancellationRequested] = useState(false)
     const [cancellationStatus, setCancellationStatus] = useState(CancellationStatus.NotTried)
-
-    useEffect(
-      () => {
-        props.getGameAddress().then(setGameAddress)
-      }
-    )
 
     useEffect(
       () => {
@@ -47,7 +40,11 @@ export const NewGameBeingCreated: FunctionComponent<{
     return (
       <div>
         <h3>Wait while new game being created...</h3>
-        <p>Game address: {gameAddress ? shortenAddress(gameAddress) : <Spinner animation="border" size="sm" />}</p>
+        <p>Game address:
+          {
+            shortenAddress(props.gameAddress)
+          }
+        </p>
         {
           (cancellationStatus == CancellationStatus.NotTried || cancellationStatus == CancellationStatus.Nok)
             ?
@@ -117,21 +114,15 @@ export const WaitingForContractPlayReaction:
     useEffect(
       () => {
         (props.playResponse as any)
-          .once("sending", (info: any) => { console.log("sending", info) })
-          .once("sent", (info: any) => { console.log("sent", info) })
-          .once("transactionHash", (info: any) => { console.log("hash", info) })
-          .once(
-            "receipt",
+          .then(
             (receipt: any) => {
               const response = receiptToPlayResponse(receipt)
               switch (response.kind) {
                 case (PlayEventKind.GameCreated): {
-                  props.onGameCreated(response)
-                  break
+                  return props.onGameCreated(response)
                 }
                 case (PlayEventKind.GameFound): {
-                  props.onGameFound(response)
-                  break
+                  return props.onGameFound(response)
                 }
               }
             }

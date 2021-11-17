@@ -64,12 +64,12 @@ contract DMNK {
     }
 
     // NOTE: This method can be invoked by the corresponding GameInstance only.
+    // initiator: is the alice of the game
     function cancel(address initiator, uint256 deposit) external {
         // msg.sender here is a GameInstance instance
-        require(_runningGames[msg.sender], "Game does not exist");
+        require(!_runningGames[msg.sender], "Game is running already.");
         (bool successfullInitiatorRefund, ) = payable(initiator).call{value: deposit}("");
         require(successfullInitiatorRefund, "Failed to transfer funds.");
-        delete _runningGames[msg.sender];
         emit GameCanceled(msg.sender);
     }
 

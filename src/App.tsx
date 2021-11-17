@@ -3,7 +3,7 @@ import { Container } from "react-bootstrap";
 import { DMNKNavbar, NavbarProps, AccountResultKind } from "./components/navbar/Navbar";
 import {
   AccountIsNotAvailable, WaitingForContractPlayReaction,
-  PlayResponse, PlayEventKind, GameCreatedResponse, GameFoundResponse
+  PlayResponse, PlayEventKind, GameCreatedResponse, GameFoundResponse, NewGameBeingCreated
 }
   from "./components/WaitScreens";
 import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
@@ -34,10 +34,10 @@ function networkTypeToWeb3Instance(networkType: NetworkType): Web3 {
 
 
 enum CurrentScreen {
-  Main,
-  WaitingForPlayResponse,
-  GamePending,
-  GamePlaying
+  Main = "Main",
+  WaitingForPlayResponse = "WaitingForPlayResponse",
+  GamePending = "GamePending",
+  GamePlaying = "GamePlaying"
 }
 
 
@@ -52,6 +52,7 @@ const App: FunctionComponent<AppProps> = (props) => {
   const [currentScreen, setCurrentScreen] = useState(CurrentScreen.Main);
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+  const [gameAddress, setGameAddress] = useState<string | null>(null);
   const [web3Instance, setWeb3Instance] = useState(
     networkTypeToWeb3Instance(NetworkType.HarmonyTestnet)
   )
@@ -108,62 +109,96 @@ const App: FunctionComponent<AppProps> = (props) => {
     }
   }
 
+  let currentComponent;
+  switch (currentScreen) {
+    case (CurrentScreen.Main): {
+      currentComponent =
+        <DMNKMainMenu
+          getBalance={async () => { return mainProps.getBalance(currentAccount!) }}
+          onGameSettingsReady={
+            (settings) => {
+              setGameSettings(settings)
+              setCurrentScreen(CurrentScreen.WaitingForPlayResponse)
+            }
+          }
+        />
+      break
+    }
+    case (CurrentScreen.WaitingForPlayResponse): {
+      currentComponent =
+        <WaitingForContractPlayReaction
+          onGameCreated={
+            (response) => {
+              console.log("Game created")
+              setGameAddress(response.gameAddress)
+              setCurrentScreen(CurrentScreen.GamePending)
+            }
+          }
+          onGameFound={
+            (response) => {
+              setCurrentScreen(CurrentScreen.GamePlaying)
+            }
+          }
+          playResponse={
+            dmnkContract
+              .methods
+              .play(
+                web3Instance.utils.toWei(gameSettings!.range_from.toString()),
+                web3Instance.utils.toWei(gameSettings!.range_to.toString()),
+              )
+              .send(
+                {
+                  "from": currentAccount!.address,
+                  "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
+                  "gas": "5000000",
+                  "gasPrice": "1000000000",
+                },
+              )
+          }
+        />
+      break
+    }
+    case (CurrentScreen.GamePending): {
+      currentComponent =
+        <NewGameBeingCreated
+          gameAddress={gameAddress!}
+          gameSettings={gameSettings!}
+          proceedAfterCancellation={
+            () => {
+              setCurrentScreen(CurrentScreen.Main)
+            }
+          }
+          cancelGame={
+            async () => {
+              const receipt: any = (
+                await (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                  .methods
+                  .cancel()
+                  .send(
+                    {
+                      "from": currentAccount!.address,
+                      "gas": "5000000",
+                      "gasPrice": "1000000000",
+                    }
+                  )
+              )
+              return receipt.status
+            }
+          }
+        />
+      break
+    }
+  }
+
   return (
     <Container>
       <DMNKNavbar {...mainProps} />
       {
         (currentAccount == null)
           ? <AccountIsNotAvailable />
-          : (
-            (currentScreen === CurrentScreen.Main)
-              ? (
-                <DMNKMainMenu
-                  getBalance={async () => { return mainProps.getBalance(currentAccount) }}
-                  onGameSettingsReady={
-                    (settings) => {
-                      setCurrentScreen(CurrentScreen.WaitingForPlayResponse)
-                      setGameSettings(settings)
-                    }
-                  }
-                />
-              )
-              : (
-                (currentScreen === CurrentScreen.WaitingForPlayResponse)
-                  ? (
-                    <WaitingForContractPlayReaction
-                      onGameCreated={
-                        (response) => {
-                          setCurrentScreen(CurrentScreen.GamePending)
-                        }
-                      }
-                      onGameFound={
-                        (response) => {
-                          setCurrentScreen(CurrentScreen.GamePlaying)
-                        }
-                      }
-                      playResponse={
-                        dmnkContract
-                          .methods
-                          .play(
-                            web3Instance.utils.toWei(gameSettings!.range_from.toString()),
-                            web3Instance.utils.toWei(gameSettings!.range_to.toString()),
-                          )
-                          .send(
-                            {
-                              "from": currentAccount!.address,
-                              "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
-                              "gas": "5000000",
-                              "gasPrice": "1000000000",
-                            },
-                          )
-                      }
-                    />
-                  )
-                  : <p>This part is not implemented yet</p>
-              )
-          )
+          : currentComponent
       }
-    </Container>
+    </Container >
   );
 }
 
