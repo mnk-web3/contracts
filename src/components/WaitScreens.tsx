@@ -17,8 +17,12 @@ export const AccountIsNotAvailable: FunctionComponent<any> = (props) => {
 export const NewGameBeingCreated: FunctionComponent<{
   gameAddress: string,
   gameSettings: { bid: number, range_from: number, range_to: number },
+  // Cancell the game
   cancelGame: () => Promise<boolean>,
   proceedAfterCancellation: () => void,
+  // Wait for the opponent
+  waitForOpponent: () => Promise<string>,
+  proceedAfterOpponentFound: (address: string) => void,
 }> =
   (props) => {
     const [cancellationRequested, setCancellationRequested] = useState(false)
@@ -35,6 +39,14 @@ export const NewGameBeingCreated: FunctionComponent<{
         }
       },
       [cancellationRequested]
+    )
+  
+    useEffect(
+      () => {
+        console.log("Waiting for opponent")
+        props.waitForOpponent().then(props.proceedAfterOpponentFound)
+      },
+      []
     )
 
     return (

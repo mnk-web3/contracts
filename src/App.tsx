@@ -27,7 +27,8 @@ function networkTypeToWeb3Instance(networkType: NetworkType): Web3 {
       return new Web3("https://api.harmony.one");
     }
     case NetworkType.HarmonyTestnet: {
-      return new Web3("https://api.s0.b.hmny.io");
+      // return new Web3("https://api.s0.b.hmny.io");
+      return new Web3("wss://ws.s0.pops.one/");
     }
   }
 }
@@ -164,6 +165,33 @@ const App: FunctionComponent<AppProps> = (props) => {
         <NewGameBeingCreated
           gameAddress={gameAddress!}
           gameSettings={gameSettings!}
+          waitForOpponent={
+            () => {
+              return new Promise(
+                (resolve, reject) => {
+                  dmnkContract.events.GameStarted(
+                    {
+                      filters: {
+                        gameAddress: gameAddress!,
+                        alice: currentAccount!.address,
+                      },
+                      fromBlock: 0,
+                    }
+                  )
+                    .on(
+                      "data",
+                      (log: any) => {
+                        resolve(log.returnValues.bob)
+                      }
+                    )
+                }
+              )
+            }}
+          proceedAfterOpponentFound={
+            (address) => {
+              setCurrentScreen(CurrentScreen.GamePlaying)
+            }
+          }
           proceedAfterCancellation={
             () => {
               setCurrentScreen(CurrentScreen.Main)
@@ -206,24 +234,56 @@ const App: FunctionComponent<AppProps> = (props) => {
           }
           getCurrentTurn={
             async () => {
-              const currentAddress = await
+              const address = await
                 (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
                   .methods
                   .getCurrentTurn()
                   .call()
-              return (currentAddress == currentAccount!.address) ? CurrentTurn.Mine : CurrentTurn.NotMine
+              return (address == currentAccount!.address) ? CurrentTurn.Mine : CurrentTurn.NotMine
             }
           }
           appendMyMove={
             async (x, y) => {
               // implement me
-              return true
+              const receipt: any = (
+                await
+                  (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                    .methods
+                    .makeMove(x.toString(), y.toString())
+                    .send(
+                      {
+                        "from": currentAccount!.address,
+                        "gas": "5000000",
+                        "gasPrice": "1000000000",
+                      }
+                    )
+              )
+              return receipt.status
             }
           }
           getOpponentMove={
-            async () => {
-              // implement me
-              return { x: 10, y: 20 }
+            () => {
+              return new Promise(
+                (resolve, reject) => {
+                  (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                    .events.Move(
+                      {
+                        filters: {
+                        },
+                        fromBlock: 0,
+                      }
+                    )
+                    .on(
+                      "data",
+                      (log: any) => {
+                        console.log("Got opponents move", log)
+                        if (log.returnValues.player != currentAccount!.address) {
+                          resolve({ x: parseInt(log.returnValues.x), y: parseInt(log.returnValues.y) })
+                        }
+                      }
+                    )
+                }
+              )
             }
           }
         />

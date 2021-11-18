@@ -152,6 +152,9 @@ contract GameInstance {
     mapping(T.Role => T.Participant) private _participants;
     mapping(uint8 => mapping(uint8 => T.Role)) private _moves;
 
+    // Players move
+    event Move(address player, uint8 x, uint8 y);
+
     T.State private _state;
 
     modifier fromDMNK() {
@@ -226,6 +229,7 @@ contract GameInstance {
         // The move seems legit, let me store it
         _moves[x][y] = _state.currentTurn;
         _state.lastMoveBlockNum = block.number;
+        emit Move(msg.sender, x, y);
 
         // Check if the current player just won the game
         if (checkWinner(_moves, x, y, _state.currentTurn)) {
