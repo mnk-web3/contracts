@@ -1,5 +1,5 @@
 import { FunctionComponent, useState, useEffect } from "react";
-import { Navbar, Container, Button, Form, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Navbar, Container, Button, Form, OverlayTrigger, Tooltip, Nav } from "react-bootstrap";
 import { Account } from "web3-core";
 import { shortenAddress } from "../common";
 
@@ -34,6 +34,7 @@ export type AccountRequestResult =
 export type NavbarProps = {
   getBalance: (account: Account) => Promise<number>,
   getAccount: () => AccountRequestResult,
+  dmnkAddress: string,
   createAccount: (password: string) => void,
 };
 
@@ -50,7 +51,7 @@ const AccountUnlock: FunctionComponent<{ unlockAccount: (password: string) => bo
       <Popover.Body>
         <Form.Group className="mb-3" controlId="formBasicPassword">
           <Form.Label>
-            Unlock:
+            <h5>Unlock</h5>
           </Form.Label>
           <Form.Control
             type="password"
@@ -109,19 +110,16 @@ const AccountDetails: FunctionComponent<
 
   const popover =
     <Popover id="popover-contained">
-      <Popover.Header as="h3">
-        <i className="bi bi-boxes"></i> Address details:
+      <Popover.Header>
+        <h5 style={{ marginBottom: "0" }}>
+          <i className="bi bi-boxes"></i> Address details:
+        </h5>
       </Popover.Header>
       <Popover.Body>
         <div>
           <QRCode
             value={props.account.address}
-            level="L"
-            style={{
-              marginLeft: "auto",
-              marginRight: "auto",
-              display: "block"
-            }}
+            style={{ marginLeft: "auto", marginRight: "auto", display: "block" }}
           />
           <hr />
           <OverlayTrigger
@@ -135,14 +133,14 @@ const AccountDetails: FunctionComponent<
           >
             <p
               style={{ marginBottom: 0, cursor: "pointer" }}
-              onClick={() => { navigator.clipboard.writeText(props.account.address).then(() => { }) }
-              }>
+              onClick={() => { navigator.clipboard.writeText(props.account.address).then(() => { }) }}
+            >
               <strong>Address:</strong> {shortenAddress(props.account.address)}
             </p>
           </OverlayTrigger>
           <p style={{ marginBottom: 0 }}><strong>Balance</strong>: {balance}</p>
           <hr />
-          <Button variant="outline-dark">Withdraw</Button>
+          <Button variant="outline-dark" className="w-100">Withdraw</Button>
         </div>
       </Popover.Body>
     </Popover>
@@ -183,17 +181,27 @@ export const DMNKNavbar: FunctionComponent<NavbarProps> = (props) => {
   return (
     <Navbar bg="dark" variant="dark">
       <Container>
+        <Navbar.Toggle />
         <Navbar.Brand>
           <strong>
-            D
-            <i className="bi bi-controller"></i>
-            NK
+            D<i className="bi bi-controller"></i>NK
           </strong>
         </Navbar.Brand>
-        <Navbar.Toggle />
-        <Navbar.Collapse className="justify-content-end">
-          < Wallet {...props} />
-        </Navbar.Collapse>
+        <Nav className="me-auto">
+          {/* --- */}
+          <Nav.Link href="https://twitter.com/0xfabaceae">
+            Author: <i className="bi bi-twitter"></i>
+          </Nav.Link>
+          {/* --- */}
+          <Nav.Link href="https://github.com/magniff/DMNK">
+            Code: <i className="bi bi-github"></i>
+          </Nav.Link>
+          {/* --- */}
+          <Nav.Link href={""}>
+            Contract: <i className="bi bi-code-square"></i>
+          </Nav.Link>
+        </Nav>
+        < Wallet {...props} />
       </Container>
     </Navbar>
   );

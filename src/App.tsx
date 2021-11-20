@@ -1,11 +1,10 @@
 import { FunctionComponent, useState } from "react";
-import { Container } from "react-bootstrap";
+import { Container, Row, Col } from "react-bootstrap";
 import { DMNKNavbar, NavbarProps, AccountResultKind } from "./components/navbar/Navbar";
 import {
-  AccountIsNotAvailable, WaitingForContractPlayReaction,
-  PlayResponse, PlayEventKind, GameCreatedResponse, GameFoundResponse, NewGameBeingCreated
-}
-  from "./components/WaitScreens";
+  AccountIsNotAvailable, WaitingForContractPlayReaction, NewGameBeingCreated,
+  UnavailabitlityReason
+} from "./components/WaitScreens";
 import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
 import { Board, CurrentTurn } from "./components/board/Board";
 import { LocalstorageKey } from "./constants";
@@ -63,6 +62,7 @@ const App: FunctionComponent<AppProps> = (props) => {
   );
 
   const mainProps: NavbarProps = {
+    dmnkAddress: props.dmnkAddress,
     createAccount: (password: string) => {
       const newWallet = web3Instance.eth.accounts.wallet.create(1);
       newWallet.save(password);
@@ -167,36 +167,22 @@ const App: FunctionComponent<AppProps> = (props) => {
           gameSettings={gameSettings!}
           waitForOpponent={
             () => {
-              return new Promise(
-                (resolve, reject) => {
-                  dmnkContract.events.GameStarted(
-                    {
-                      filters: {
-                        gameAddress: gameAddress!,
-                        alice: currentAccount!.address,
-                      },
-                      fromBlock: 0,
-                    }
-                  )
-                    .on(
-                      "data",
-                      (log: any) => {
-                        resolve(log.returnValues.bob)
-                      }
-                    )
-                }
+              return (
+                new Promise(
+                  (resolve, reject) => {
+                    dmnkContract.events
+                      .GameStarted({ filters: { gameAddress: gameAddress! }, fromBlock: 0 })
+                      .on(
+                        "data",
+                        (event: any) => resolve(event.returnValues.bob)
+                      )
+                  }
+                )
               )
-            }}
-          proceedAfterOpponentFound={
-            (address) => {
-              setCurrentScreen(CurrentScreen.GamePlaying)
             }
           }
-          proceedAfterCancellation={
-            () => {
-              setCurrentScreen(CurrentScreen.Main)
-            }
-          }
+          proceedAfterOpponentFound={(address) => { setCurrentScreen(CurrentScreen.GamePlaying) }}
+          proceedAfterCancellation={() => setCurrentScreen(CurrentScreen.Main)}
           cancelGame={
             async () => {
               const receipt: any = (
@@ -224,12 +210,15 @@ const App: FunctionComponent<AppProps> = (props) => {
           dimensions={{ width: 25, height: 25 }}
           getLockedValue={
             async () => {
-              const valueAsWEI = await
-                (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
-                  .methods
-                  .getLockedValue()
-                  .call()
-              return parseFloat(web3Instance.utils.fromWei(valueAsWEI))
+              return parseFloat(
+                web3Instance.utils.fromWei(
+                  await
+                    (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                      .methods
+                      .getLockedValue()
+                      .call()
+                )
+              )
             }
           }
           getCurrentTurn={
@@ -243,62 +232,86 @@ const App: FunctionComponent<AppProps> = (props) => {
             }
           }
           appendMyMove={
-            async (x, y) => {
-              // implement me
-              const receipt: any = (
-                await
-                  (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
-                    .methods
-                    .makeMove(x.toString(), y.toString())
-                    .send(
-                      {
-                        "from": currentAccount!.address,
-                        "gas": "5000000",
-                        "gasPrice": "1000000000",
-                      }
-                    )
+            (x, y) => {
+              return (
+                new Promise(
+                  (resolve, _) => {
+                    (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
+                      .methods
+                      .makeMove(x.toString(), y.toString())
+                      .send(
+                        {
+                          "from": currentAccount!.address,
+                          "gas": "5000000",
+                          "gasPrice": "1000000000",
+                        }
+                      )
+                      .then((receipt: any) => resolve(receipt.status))
+                      .catch((_: any) => resolve(false))
+                  }
+                )
               )
-              return receipt.status
             }
           }
           getOpponentMove={
             () => {
+              // Here I have to promisify
               return new Promise(
                 (resolve, reject) => {
                   (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
-                    .events.Move(
-                      {
-                        filters: {
-                        },
-                        fromBlock: 0,
-                      }
-                    )
+                    .events.Move({ fromBlock: 0 })
                     .on(
                       "data",
-                      (log: any) => {
-                        console.log("Got opponents move", log)
-                        if (log.returnValues.player != currentAccount!.address) {
-                          resolve({ x: parseInt(log.returnValues.x), y: parseInt(log.returnValues.y) })
+                      (event: any) => {
+                        if (event.returnValues.player != currentAccount!.address) {
+                          resolve({ x: parseInt(event.returnValues.x), y: parseInt(event.returnValues.y) })
                         }
                       }
                     )
+                  // Dont forget to properly reject
                 }
               )
             }
           }
+          waitForFinish={
+            () =>
+              new Promise(
+                (resolve, _) => {
+                  dmnkContract.events
+                    .GameFinished({ filters: { gameAddress: gameAddress! }, fromBlock: 0 })
+                    .on(
+                      "data",
+                      (event: any) => {
+                        resolve(event.returnValues.winnerAddress)
+                      }
+                    )
+                }
+              )
+          }
+          onFinish={(address) => { setCurrentScreen(CurrentScreen.Main) }}
         />
     }
   }
 
   return (
-    <Container>
+    <Container className="vh-100 main-container">
       <DMNKNavbar {...mainProps} />
-      {
-        (currentAccount == null)
-          ? <AccountIsNotAvailable />
-          : currentComponent
-      }
-    </Container >
+      <Row className="align-items-center h-100">
+        <Col>
+          {
+            (currentAccount == null)
+              ? <AccountIsNotAvailable
+                reason={
+                  window.localStorage.getItem(LocalstorageKey) == null
+                    ? UnavailabitlityReason.DoesNotExist
+                    : UnavailabitlityReason.Locked
+                }
+              />
+              : currentComponent
+          }
+        </Col>
+      </Row>
+    </Container>
   );
 }
 

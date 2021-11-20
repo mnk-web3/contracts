@@ -44,6 +44,13 @@ contract DMNK {
     // DMNK owner
     address payable _minter;
 
+    // stats counters
+    uint256 public cancelledCounter;
+    uint256 public completedCounter;
+    uint256 public runningCounter;
+    uint256 public pendingCounter;
+    
+
     // GI.GameInstance public _instance;
     GI.GameInstance[] _pendingQueue;
     mapping(address => bool) _runningGames;
@@ -56,7 +63,7 @@ contract DMNK {
         address bob,
         address currentTurn
     );
-    event GameFinished(address gameAddress);
+    event GameFinished(address gameAddress, address winnerAddress);
     event GameCanceled(address gameAddress);
 
     function getQueueLength() public view returns (uint256) {
@@ -70,6 +77,8 @@ contract DMNK {
         require(!_runningGames[msg.sender], "Game is running already.");
         (bool successfullInitiatorRefund, ) = payable(initiator).call{value: deposit}("");
         require(successfullInitiatorRefund, "Failed to transfer funds.");
+        cancelledCounter += 1;
+        pendingCounter -= 1;
         emit GameCanceled(msg.sender);
     }
 
@@ -86,7 +95,9 @@ contract DMNK {
             "Failed to transfer funds."
         );
         delete _runningGames[msg.sender];
-        emit GameFinished(msg.sender);
+        completedCounter += 1;
+        runningCounter -= 1;
+        emit GameFinished(msg.sender, winner);
     }
 
     function play(uint256 range_from, uint256 range_to) public payable {
@@ -109,6 +120,8 @@ contract DMNK {
             // Remove the game from waiting queue
             deqGame(_pendingQueue, game);
             _runningGames[address(game)] = true;
+            pendingCounter -= 1;
+            runningCouner += 1;
             emit GameStarted({
                 gameAddress: address(game),
                 alice: game.getParticipant(T.Role.Alice).addr,
@@ -119,6 +132,7 @@ contract DMNK {
             GI.GameInstance game = new GI.GameInstance(participant);
             // Add the game to waiting queue
             enqGame(_pendingQueue, game);
+            pendingCounter += 1;
             emit GameCreated(address(game), participant.addr);
         }
     }

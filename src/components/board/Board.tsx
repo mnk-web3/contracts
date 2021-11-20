@@ -132,6 +132,9 @@ interface GameProps {
   // Moves
   appendMyMove: (x: number, y: number) => Promise<boolean>
   getOpponentMove: () => Promise<{ x: number, y: number }>
+  // Finalize
+  waitForFinish: () => Promise<string>,
+  onFinish: (address: string) => void,
 }
 
 
@@ -181,6 +184,13 @@ export const Board: FunctionComponent<GameProps> = (props) => {
     [currentTurn]
   )
 
+  // Finilize the game
+  useEffect(
+    () => {
+      props.waitForFinish().then(props.onFinish)
+    },
+    []
+  )
   const renderCurrentTurnMemo = (turn: CurrentTurn) => {
     switch (turn) {
       case (CurrentTurn.Unknown): {
