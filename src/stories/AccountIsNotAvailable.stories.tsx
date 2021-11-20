@@ -1,7 +1,7 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
 
 
-import { AccountIsNotAvailable } from "../components/WaitScreens";
+import { AccountIsNotAvailable, UnavailabitlityReason } from "../components/WaitScreens";
 
 
 export default {
@@ -17,4 +17,5 @@ export const AccountIsLocked = Template.bind({});
 
 
 AccountIsLocked.args = {
+  reason: UnavailabitlityReason.Locked
 };

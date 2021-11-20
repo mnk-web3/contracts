@@ -2,6 +2,8 @@ import { Component, FunctionComponent, useState, useEffect } from "react";
 import { Button, Row, Stack } from "react-bootstrap";
 import { Map as ImmutableMap, Record } from "immutable";
 import { Spinner } from "react-bootstrap";
+import { shortenAddress } from "../common";
+import "animate.css"
 
 
 import "./Board.css"
@@ -34,16 +36,16 @@ enum CellState {
 function cellStateToString(state: CellState): string {
   switch (state) {
     case (CellState.Mine): {
-      return "mine"
+      return "mine animate__animated animate__rubberBand"
     }
     case (CellState.NotMine): {
-      return "notMine fadein"
+      return "notMine animate__animated animate__rubberBand"
     }
     case (CellState.Free): {
       return "free"
     }
     case (CellState.Sync): {
-      return "sync"
+      return "mine animate__animated animate__jello animate__infinite"
     }
   }
 }
@@ -53,15 +55,10 @@ const Cell: FunctionComponent<CellProps> = (props) => {
   const [clicked, setClicked] = useState(false);
   useEffect(
     () => {
-      if (clicked) {
+      clicked &&
         props
           .tryClaim()
-          .then(
-            (_) => {
-              setClicked(false)
-            }
-          )
-      }
+          .then((_) => { setClicked(false) })
     },
     [clicked]
   )
@@ -70,7 +67,7 @@ const Cell: FunctionComponent<CellProps> = (props) => {
       className={`cell ${cellStateToString(props.state)}`}
       onClick={
         () => {
-          setClicked(true)
+          (props.state == CellState.Free) && setClicked(true)
         }
       }
     >
@@ -83,7 +80,7 @@ const ImmutablePosition = Record<Position>({ x: 0, y: 0 });
 
 export const BoardGrid: FunctionComponent<BoardBrops> = (props) => {
   return (
-    <div className="gridContainer fadein">
+    <div className="gridContainer animate__animated animate__flipInY">
       {
         [...Array(props.height)]
           .map(
@@ -129,6 +126,8 @@ interface GameProps {
   // Contract related data
   getLockedValue: () => Promise<number>
   getCurrentTurn: () => Promise<CurrentTurn>
+  gameAddress: string,
+  opponentAddress: string,
   // Moves
   appendMyMove: (x: number, y: number) => Promise<boolean>
   getOpponentMove: () => Promise<{ x: number, y: number }>
@@ -144,6 +143,8 @@ export const Board: FunctionComponent<GameProps> = (props) => {
 
   // Part of the state, provided by the contract itself
   const [valueLocked, setValueLocked] = useState<number | null>(null);
+  const [gameAddress, setGameAddress] = useState<string | null>(null);
+  const [opponentAddress, setOpponentAddress] = useState<string | null>(null);
   const [currentTurn, setCurrentTurn] = useState<CurrentTurn>(CurrentTurn.Unknown);
 
   // State of the game field
@@ -152,20 +153,9 @@ export const Board: FunctionComponent<GameProps> = (props) => {
   )
 
   // Resolve the total funds locked value
-  useEffect(
-    () => {
-      props.getLockedValue().then(setValueLocked)
-    },
-    []
-  )
-
+  useEffect(() => { props.getLockedValue().then(setValueLocked) }, [])
   // Resolve the turn state
-  useEffect(
-    () => {
-      props.getCurrentTurn().then(setCurrentTurn)
-    },
-    []
-  )
+  useEffect(() => { props.getCurrentTurn().then(setCurrentTurn) }, [])
 
   // Resolve opponents move
   useEffect(
@@ -195,24 +185,24 @@ export const Board: FunctionComponent<GameProps> = (props) => {
     switch (turn) {
       case (CurrentTurn.Unknown): {
         return (
-          <p>Turn:
-            <Spinner animation="border" size="sm" />
-          </p>
+          <p className="barInfoItem">Turn: <Spinner animation="border" size="sm" /></p>
         )
       }
       case (CurrentTurn.Mine): {
-        return <p>Turn: <strong>me</strong></p>
+        return <p className="barInfoItem">Turn: <strong>mine</strong></p>
       }
       case (CurrentTurn.NotMine): {
-        return <p>Turn: <strong>opponent</strong></p>
+        return <p className="barInfoItem">Turn: <strong>opponent's</strong></p>
       }
     }
   }
 
   return (
-    <div className="boardContainer">
-      <p>Funds locked: <strong>{valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}</strong></p>
-      {renderCurrentTurnMemo(currentTurn)}
+    <div className="boardContainer animate__animated animate__flipInX">
+      <div className="infoBar">
+        <p className="barInfoItem">Deposit: <strong>{valueLocked ? valueLocked : <Spinner animation="border" size="sm" />}</strong></p>
+        {renderCurrentTurnMemo(currentTurn)}
+      </div>
       <BoardGrid
         width={props.dimensions.width}
         height={props.dimensions.height}
@@ -226,13 +216,16 @@ export const Board: FunctionComponent<GameProps> = (props) => {
             if (currentTurn == CurrentTurn.Mine && !isProcessing) {
               const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
               let valueToReturn: boolean;
+
               setProcessing(true)
               setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Sync))
               if (await props.appendMyMove(x, y)) {
                 setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Mine))
                 setCurrentTurn(CurrentTurn.NotMine);
                 valueToReturn = true
-              } else {
+              }
+
+              else {
                 gridState.set(ImmutablePosition({ x: x, y: y }), cellStateBackup)
                 valueToReturn = false
               }
@@ -243,6 +236,11 @@ export const Board: FunctionComponent<GameProps> = (props) => {
           }
         }
       />
+      <div className="infoBar">
+        <p className="barInfoItem">Game: <strong>{shortenAddress(props.gameAddress)}</strong></p>
+        <p className="barInfoItem">Opponent: <strong>{shortenAddress(props.opponentAddress)}</strong></p>
+      </div>
+      <Button variant="outline-dark" style={{ width: "100%" }}>Surrender <i className="bi bi-x-lg"></i></Button>
     </div>
   )
 }

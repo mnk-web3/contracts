@@ -5,8 +5,9 @@
 }
 
 :root {
-  --cellSize: 20;
-  --cellMargin: 2px;
+  --cellSize: 23px;
+  --cellFontSize: 20px;
+  --cellMargin: 1px;
 }
 
 .line {
@@ -16,24 +17,44 @@
   margin-bottom: var(--cellMargin);
 }
 
+.boardContainer {
+  width: max-content;
+  margin: 0px auto;
+}
+
 .gridContainer {
   display: flex;
+  margin: 0px auto;
   flex-direction: column;
   flex-wrap: nowrap;
   background-color: black;
-  padding: 15px;
+  padding: 13px;
   width: min-content;
   border-radius: 10px;
+}
+
+.infoBar {
+  display: flex;
+  flex-direction: row;
+}
+
+.barInfoItem {
+    margin-left: 1rem;
+    margin-right: 1rem;
+    margin-top: 0px;
+    margin-bottom: 0.3rem;
 }
 
 .cell {
   width: var(--cellSize);
   height: var(--cellSize);
+  font-size: var(--cellFontSize);
+
   min-width: var(--cellSize);
   min-height: var(--cellSize);
 
   border-width: 0px;
-  border-radius: 7px;
+  border-radius: 5px;
 
   margin-left: var(--cellMargin);
   margin-right: var(--cellMargin);
@@ -48,74 +69,9 @@
 }
 
 .notMine {
-  background-color:royalblue;
-}
-
-.sync {
-  background-color: orange;
-  animation: blinker 1s linear infinite;
+  background-color: #2aa17d;
 }
 
 .cell:hover {
-  background-color: pink;
-}
-
-.fadein {
-  /* margin-top: 25px;
-    font-size: 21px;
-    text-align: center; */
-  -webkit-animation: fadein 1s; /* Safari, Chrome and Opera > 12.1 */
-  -moz-animation: fadein 1s; /* Firefox < 16 */
-  -ms-animation: fadein 1s; /* Internet Explorer */
-  -o-animation: fadein 1s; /* Opera < 12.1 */
-  animation: fadein 1s;
-}
-
-@keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Firefox < 16 */
-@-moz-keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Safari, Chrome and Opera > 12.1 */
-@-webkit-keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Internet Explorer */
-@-ms-keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Opera < 12.1 */
-@-o-keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  background-color: orange;
 }

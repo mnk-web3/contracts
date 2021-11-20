@@ -53,6 +53,7 @@ const App: FunctionComponent<AppProps> = (props) => {
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [gameAddress, setGameAddress] = useState<string | null>(null);
+  const [opponentAddress, setOpponentAddress] = useState<string | null>(null);
   const [web3Instance, setWeb3Instance] = useState(
     networkTypeToWeb3Instance(NetworkType.HarmonyTestnet)
   )
@@ -137,6 +138,7 @@ const App: FunctionComponent<AppProps> = (props) => {
           onGameFound={
             (response) => {
               setGameAddress(response.gameAddress)
+              setOpponentAddress(response.opponentAddress)
               setCurrentScreen(CurrentScreen.GamePlaying)
             }
           }
@@ -181,7 +183,12 @@ const App: FunctionComponent<AppProps> = (props) => {
               )
             }
           }
-          proceedAfterOpponentFound={(address) => { setCurrentScreen(CurrentScreen.GamePlaying) }}
+          proceedAfterOpponentFound={
+            (address) => {
+              setOpponentAddress(address)
+              setCurrentScreen(CurrentScreen.GamePlaying)
+            }
+          }
           proceedAfterCancellation={() => setCurrentScreen(CurrentScreen.Main)}
           cancelGame={
             async () => {
@@ -207,6 +214,8 @@ const App: FunctionComponent<AppProps> = (props) => {
     case (CurrentScreen.GamePlaying): {
       currentComponent =
         <Board
+          gameAddress={gameAddress!}
+          opponentAddress={opponentAddress!}
           dimensions={{ width: 25, height: 25 }}
           getLockedValue={
             async () => {

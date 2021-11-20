@@ -67,37 +67,51 @@ function makeOpponentsMoveMock(gridSize: number): (() => Promise<{x: number, y: 
 }
 
 
+
+function waitForFinishMock(): Promise<string> {
+  return new Promise(
+    (resolve, reject) => {
+      setTimeout(() => { resolve("someaddress") }, 1000000)
+    }
+  )
+}
+
+
 ActualInGame.args = {
   dimensions: {
     height: 25,
     width: 25
   },
+  gameAddress: "0xda4566317090ba89d8d88f5b5fcdb34d8aab87fd",
+  opponentAddress: "0xda4566317090ba89d8d88f5b5fcdb34d8aab87fd",
   getLockedValue: getLockedValueMock,
   getCurrentTurn: getCurrentTurnMock,
   getOpponentMove: makeOpponentsMoveMock(25),
   appendMyMove: makeMoveMock,
+  waitForFinish: waitForFinishMock,
+  onFinish: (address) => {},
 };
 
 
-Small.args = {
-  dimensions: {
-    height: 5,
-    width: 5
-  },
-  getLockedValue: getLockedValueMock,
-  getCurrentTurn: getCurrentTurnMock,
-  getOpponentMove: makeOpponentsMoveMock(5),
-  appendMyMove: makeMoveMock,
-};
+// Small.args = {
+//   dimensions: {
+//     height: 5,
+//     width: 5
+//   },
+//   getLockedValue: getLockedValueMock,
+//   getCurrentTurn: getCurrentTurnMock,
+//   getOpponentMove: makeOpponentsMoveMock(5),
+//   appendMyMove: makeMoveMock,
+// };
 
 
-Medium.args = {
-  dimensions: {
-    height: 15,
-    width: 15
-  },
-  getLockedValue: getLockedValueMock,
-  getCurrentTurn: getCurrentTurnMock,
-  getOpponentMove: makeOpponentsMoveMock(15),
-  appendMyMove: makeMoveMock,
-};
+// Medium.args = {
+//   dimensions: {
+//     height: 15,
+//     width: 15
+//   },
+//   getLockedValue: getLockedValueMock,
+//   getCurrentTurn: getCurrentTurnMock,
+//   getOpponentMove: makeOpponentsMoveMock(15),
+//   appendMyMove: makeMoveMock,
+// };
