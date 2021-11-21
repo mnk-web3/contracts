@@ -69,7 +69,8 @@
 }
 
 .notMine {
-  background-color: #2aa17d;
+  /* background-color: #2aa17d; */
+  background-color:cornflowerblue
 }
 
 .cell:hover {

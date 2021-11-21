@@ -13,7 +13,7 @@ interface BoardBrops {
   height: number,
   width: number,
   claimCell: (x: number, y: number) => Promise<boolean>
-  getCellState: (x: number, y: number) => CellState
+  getCellState: (x: number, y: number) => Owner
 }
 
 interface Position {
@@ -23,28 +23,32 @@ interface Position {
 
 interface CellProps {
   position: Position,
-  state: CellState,
-  tryClaim: () => Promise<boolean>,
+  owner: Owner,
+  // Invoke here a higher order functionality, like Grid.claimCell and contract.makeMove
+  claimCell: () => Promise<boolean>,
 }
 
 
-enum CellState {
-  Free, Mine, NotMine, Sync
+enum Owner {
+  // These are self explanatory
+  Free, Mine, NotMine,
+  // Set Owner.Sync while waiting the contract response
+  Sync
 }
 
 
-function cellStateToString(state: CellState): string {
+function cellStateToString(state: Owner): string {
   switch (state) {
-    case (CellState.Mine): {
+    case (Owner.Mine): {
       return "mine animate__animated animate__rubberBand"
     }
-    case (CellState.NotMine): {
+    case (Owner.NotMine): {
       return "notMine animate__animated animate__rubberBand"
     }
-    case (CellState.Free): {
+    case (Owner.Free): {
       return "free"
     }
-    case (CellState.Sync): {
+    case (Owner.Sync): {
       return "mine animate__animated animate__jello animate__infinite"
     }
   }
@@ -57,19 +61,15 @@ const Cell: FunctionComponent<CellProps> = (props) => {
     () => {
       clicked &&
         props
-          .tryClaim()
+          .claimCell()
           .then((_) => { setClicked(false) })
     },
     [clicked]
   )
   return (
     <button
-      className={`cell ${cellStateToString(props.state)}`}
-      onClick={
-        () => {
-          (props.state == CellState.Free) && setClicked(true)
-        }
-      }
+      className={`cell ${cellStateToString(props.owner)}`}
+      onClick={() => { (props.owner == Owner.Free) && setClicked(true) }}
     >
     </button>
   )
@@ -94,9 +94,9 @@ export const BoardGrid: FunctionComponent<BoardBrops> = (props) => {
                           return (
                             <Cell
                               key={`cell-${lineno}-${colno}`}
-                              state={props.getCellState(colno, lineno)}
+                              owner={props.getCellState(colno, lineno)}
                               position={{ x: colno, y: lineno }}
-                              tryClaim={
+                              claimCell={
                                 async () => {
                                   return await props.claimCell(colno, lineno)
                                 }
@@ -143,29 +143,24 @@ export const Board: FunctionComponent<GameProps> = (props) => {
 
   // Part of the state, provided by the contract itself
   const [valueLocked, setValueLocked] = useState<number | null>(null);
-  const [gameAddress, setGameAddress] = useState<string | null>(null);
-  const [opponentAddress, setOpponentAddress] = useState<string | null>(null);
   const [currentTurn, setCurrentTurn] = useState<CurrentTurn>(CurrentTurn.Unknown);
 
   // State of the game field
   const [gridState, setGridState] = (
-    useState<ImmutableMap<Record<Position>, CellState>>(ImmutableMap())
+    useState<ImmutableMap<Record<Position>, Owner>>(ImmutableMap())
   )
 
   // Resolve the total funds locked value
   useEffect(() => { props.getLockedValue().then(setValueLocked) }, [])
   // Resolve the turn state
   useEffect(() => { props.getCurrentTurn().then(setCurrentTurn) }, [])
-
   // Resolve opponents move
   useEffect(
     () => {
       if (currentTurn == CurrentTurn.NotMine) {
         props.getOpponentMove().then(
           (move) => {
-            setGridState(
-              gridState.set(ImmutablePosition(move), CellState.NotMine)
-            )
+            setGridState(gridState.set(ImmutablePosition(move), Owner.NotMine))
             setCurrentTurn(CurrentTurn.Mine)
           }
         )
@@ -173,14 +168,12 @@ export const Board: FunctionComponent<GameProps> = (props) => {
     },
     [currentTurn]
   )
-
   // Finilize the game
   useEffect(
-    () => {
-      props.waitForFinish().then(props.onFinish)
-    },
+    () => { props.waitForFinish().then(props.onFinish) },
     []
   )
+
   const renderCurrentTurnMemo = (turn: CurrentTurn) => {
     switch (turn) {
       case (CurrentTurn.Unknown): {
@@ -208,19 +201,19 @@ export const Board: FunctionComponent<GameProps> = (props) => {
         height={props.dimensions.height}
         getCellState={
           (x: number, y: number) => {
-            return gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
+            return gridState.get(ImmutablePosition({ x: x, y: y })) || Owner.Free
           }
         }
         claimCell={
           async (x, y) => {
             if (currentTurn == CurrentTurn.Mine && !isProcessing) {
-              const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || CellState.Free
+              const cellStateBackup = gridState.get(ImmutablePosition({ x: x, y: y })) || Owner.Free
               let valueToReturn: boolean;
 
               setProcessing(true)
-              setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Sync))
+              setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), Owner.Sync))
               if (await props.appendMyMove(x, y)) {
-                setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), CellState.Mine))
+                setGridState(gridState.set(ImmutablePosition({ x: x, y: y }), Owner.Mine))
                 setCurrentTurn(CurrentTurn.NotMine);
                 valueToReturn = true
               }

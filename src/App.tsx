@@ -6,7 +6,7 @@ import {
   UnavailabitlityReason
 } from "./components/WaitScreens";
 import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
-import { Board, CurrentTurn } from "./components/board/Board";
+import { Board, CurrentTurn } from "./components/game/Board";
 import { LocalstorageKey } from "./constants";
 import { Account } from "web3-core";
 
@@ -268,7 +268,8 @@ const App: FunctionComponent<AppProps> = (props) => {
               return new Promise(
                 (resolve, reject) => {
                   (new web3Instance.eth.Contract(props.gameInstanceABI, gameAddress!))
-                    .events.Move({ fromBlock: 0 })
+                    .events
+                    .Move({ fromBlock: 0 })
                     .on(
                       "data",
                       (event: any) => {
@@ -277,7 +278,7 @@ const App: FunctionComponent<AppProps> = (props) => {
                         }
                       }
                     )
-                  // Dont forget to properly reject
+                    .on("error", reject)
                 }
               )
             }

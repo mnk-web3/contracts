@@ -1,7 +1,7 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
 
 
-import { Board, CurrentTurn } from "../components/board/Board"
+import { Board, CurrentTurn } from "../components/game/Board"
 
 
 export default {
