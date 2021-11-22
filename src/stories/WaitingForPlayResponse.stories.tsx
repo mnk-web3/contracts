@@ -26,6 +26,7 @@ function getPlayResponse(): Promise<PlayResponse> {
 
 
 Main.args = {
+  onInsufficientBalance: () => {},
   onGameCreated: (response) => {},
   onGameFound: (response) => {},
   getPlayResponse: () => getPlayResponse(),

@@ -121,7 +121,7 @@ contract DMNK {
             deqGame(_pendingQueue, game);
             _runningGames[address(game)] = true;
             pendingCounter -= 1;
-            runningCouner += 1;
+            runningCounter += 1;
             emit GameStarted({
                 gameAddress: address(game),
                 alice: game.getParticipant(T.Role.Alice).addr,

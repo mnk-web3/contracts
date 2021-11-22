@@ -9,6 +9,7 @@ import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
 import { Board, CurrentTurn } from "./components/game/Board";
 import { LocalstorageKey } from "./constants";
 import { Account } from "web3-core";
+import { Contract } from "web3-eth-contract";
 
 
 import Web3 from "web3";
@@ -45,6 +46,9 @@ export type AppProps = {
   dmnkABI: any,
   dmnkAddress: string,
   gameInstanceABI: any,
+  addGame: (address: string) => void,
+  dropGame: (address: string) => void,
+  getGames: () => Set<string>
 }
 
 
@@ -111,10 +115,10 @@ const App: FunctionComponent<AppProps> = (props) => {
     }
   }
 
-  let currentComponent;
+  let componentToShow;
   switch (currentScreen) {
     case (CurrentScreen.Main): {
-      currentComponent =
+      componentToShow =
         <DMNKMainMenu
           getBalance={async () => { return mainProps.getBalance(currentAccount!) }}
           onGameSettingsReady={
@@ -127,16 +131,21 @@ const App: FunctionComponent<AppProps> = (props) => {
       break
     }
     case (CurrentScreen.WaitingForPlayResponse): {
-      currentComponent =
+      componentToShow =
         <WaitingForContractPlayReaction
+          onInsufficientBalance={() => {
+            setCurrentScreen(CurrentScreen.Main)
+          }}
           onGameCreated={
             (response) => {
+              props.addGame(response.gameAddress)
               setGameAddress(response.gameAddress)
               setCurrentScreen(CurrentScreen.GamePending)
             }
           }
           onGameFound={
             (response) => {
+              props.addGame(response.gameAddress)
               setGameAddress(response.gameAddress)
               setOpponentAddress(response.opponentAddress)
               setCurrentScreen(CurrentScreen.GamePlaying)
@@ -163,7 +172,7 @@ const App: FunctionComponent<AppProps> = (props) => {
       break
     }
     case (CurrentScreen.GamePending): {
-      currentComponent =
+      componentToShow =
         <NewGameBeingCreated
           gameAddress={gameAddress!}
           gameSettings={gameSettings!}
@@ -189,7 +198,11 @@ const App: FunctionComponent<AppProps> = (props) => {
               setCurrentScreen(CurrentScreen.GamePlaying)
             }
           }
-          proceedAfterCancellation={() => setCurrentScreen(CurrentScreen.Main)}
+          proceedAfterCancellation={
+            () => {
+              setCurrentScreen(CurrentScreen.Main)
+            }
+          }
           cancelGame={
             async () => {
               const receipt: any = (
@@ -205,6 +218,7 @@ const App: FunctionComponent<AppProps> = (props) => {
                       }
                     )
               )
+              receipt.status && props.dropGame(gameAddress!)
               return receipt.status
             }
           }
@@ -212,7 +226,7 @@ const App: FunctionComponent<AppProps> = (props) => {
       break
     }
     case (CurrentScreen.GamePlaying): {
-      currentComponent =
+      componentToShow =
         <Board
           gameAddress={gameAddress!}
           opponentAddress={opponentAddress!}
@@ -298,7 +312,12 @@ const App: FunctionComponent<AppProps> = (props) => {
                 }
               )
           }
-          onFinish={(address) => { setCurrentScreen(CurrentScreen.Main) }}
+          onFinish={
+            (address) => {
+              props.dropGame(gameAddress!)
+              setCurrentScreen(CurrentScreen.Main)
+            }
+          }
         />
     }
   }
@@ -317,7 +336,7 @@ const App: FunctionComponent<AppProps> = (props) => {
                     : UnavailabitlityReason.Locked
                 }
               />
-              : currentComponent
+              : componentToShow
           }
         </Col>
       </Row>

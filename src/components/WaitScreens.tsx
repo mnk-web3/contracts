@@ -153,6 +153,11 @@ function receiptToPlayResponse(receipt: any): PlayResponse {
 }
 
 
+enum PlayInvocationError {
+  NoError, NoGas
+}
+
+
 export const WaitingForContractPlayReaction:
   FunctionComponent<
     {
@@ -160,8 +165,12 @@ export const WaitingForContractPlayReaction:
       getPlayResponse: () => Promise<any>,
       onGameCreated: (response: GameCreatedResponse) => void,
       onGameFound: (response: GameFoundResponse) => void,
+      onInsufficientBalance: () => void,
     }>
   = (props) => {
+    const [txHash, setTxHash] = useState<string | null>(null)
+    const [error, setError] = useState(PlayInvocationError.NoError)
+  
     useEffect(
       () => {
         (props.getPlayResponse() as any)
@@ -179,6 +188,20 @@ export const WaitingForContractPlayReaction:
               }
             }
           )
+          // .on(
+          //   "transactionHash",
+          //   (hash: string) => {
+          //     setTxHash(hash)
+          //   }
+          // )
+          .once(
+            "error",
+            (error: any, receipt: any) => {
+              if (receipt == undefined) {
+                setError(PlayInvocationError.NoGas)
+              }
+            }
+          )
       },
       []
     )
@@ -189,7 +212,27 @@ export const WaitingForContractPlayReaction:
             <Stack gap={2} className="col-md-12 mx-auto">
               <hr />
               <h2 className="mx-auto">Waiting for the blockchain response</h2>
-              <p className="mx-auto"><strong>DMNK</strong> is thinking, you know <Spinner animation="border" size="sm" /></p>
+              {
+                (error == PlayInvocationError.NoError)
+                  ? (
+                    <>
+                      <p className="mx-auto">
+                        <strong>DMNK</strong> is thinking, you know <Spinner animation="border" size="sm" />
+                      </p>
+                      <p className="mx-auto">
+                        Transaction: {txHash && txHash || <Spinner animation="border" size="sm" />}
+                      </p>
+                    </>
+                  )
+                  : (
+                    <>
+                      <p className="mx-auto">Your balance is insufficient to pay the gas fees for the call</p>
+                      <Button variant="outline-dark" onClick={props.onInsufficientBalance}>
+                        Go to main menu <i className="bi bi-list"></i>
+                      </Button>
+                    </>
+                  )
+              }
               <hr />
             </Stack>
           </Col>
