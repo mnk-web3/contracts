@@ -1,4 +1,4 @@
-import { Component, FunctionComponent, useEffect, useRef, useState } from "react";
+import { FunctionComponent, useEffect, useState } from "react";
 import { Container, Button, Col, Row, Form, Stack, Spinner } from "react-bootstrap";
 import { Contract } from "web3-eth-contract";
 
@@ -6,7 +6,7 @@ import { Contract } from "web3-eth-contract";
 import "./common.css";
 
 
-import { Account, WalletBase } from "web3-core";
+import { WalletBase } from "web3-core";
 import Web3 from "web3";
 
 

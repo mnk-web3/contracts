@@ -9,11 +9,12 @@ import DMNKMainMenu, { GameSettings } from "./components/MainMenu";
 import { Board, CurrentTurn } from "./components/game/Board";
 import { LocalstorageKey } from "./constants";
 import { Account } from "web3-core";
-import { Contract } from "web3-eth-contract";
 
 
 import Web3 from "web3";
 
+const GAS_PRICE = "30000000000"
+const GAS_AMOUNT = "5000000"
 
 enum NetworkType {
   HarmonyTestnet,
@@ -163,8 +164,8 @@ const App: FunctionComponent<AppProps> = (props) => {
                   {
                     "from": currentAccount!.address,
                     "value": web3Instance.utils.toWei(gameSettings!.bid.toString()),
-                    "gas": "5000000",
-                    "gasPrice": "1000000000",
+                    "gas": GAS_AMOUNT,
+                    "gasPrice": GAS_PRICE,
                   },
                 )
           }
@@ -213,8 +214,8 @@ const App: FunctionComponent<AppProps> = (props) => {
                     .send(
                       {
                         "from": currentAccount!.address,
-                        "gas": "5000000",
-                        "gasPrice": "1000000000",
+                        "gas": GAS_AMOUNT,
+                        "gasPrice": GAS_PRICE,
                       }
                     )
               )
@@ -265,8 +266,8 @@ const App: FunctionComponent<AppProps> = (props) => {
                       .send(
                         {
                           "from": currentAccount!.address,
-                          "gas": "5000000",
-                          "gasPrice": "1000000000",
+                          "gas": GAS_AMOUNT,
+                          "gasPrice": GAS_PRICE,
                         }
                       )
                       .then((receipt: any) => resolve(receipt.status))

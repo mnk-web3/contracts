@@ -30,8 +30,8 @@ def do_the_move(w3, game, wallet, x, y, nonce):
                     {
                         "from": wallet.address,
                         "chainId": 1666700000,
-                        "gas": 2 * 10 ** 6,
-                        "gasPrice": 10 ** 9,
+                        "gas": 10 * 10 ** 6,
+                        "gasPrice": 30 * 10 ** 9,
                         "nonce": nonce,
                     },
                 ),

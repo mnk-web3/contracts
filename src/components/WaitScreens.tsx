@@ -69,7 +69,11 @@ export const NewGameBeingCreated: FunctionComponent<NewRoomProps> = (props) => {
           (cancelSucceeded) => {
             setCancellationStatus(cancelSucceeded ? CancellationStatus.Ok : CancellationStatus.Nok)
             setCancellationRequested(false)
-          })
+          }).catch(
+            (error: any) => {
+              console.log(error)
+            }
+          )
       }
     },
     [cancellationRequested]

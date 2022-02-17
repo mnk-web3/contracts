@@ -1,4 +1,3 @@
-import time
 from .conftest import wait_for_transaction
 
 
@@ -12,8 +11,8 @@ def test_matchmaking_parity_match(w3, dmnkContract, prepayedWallets):
                         {
                             "from": wallet.address,
                             "chainId": 1666700000,
-                            "gas": 2 * 10 ** 6,
-                            "gasPrice": 10 ** 9,
+                            "gas": 20 * 10 ** 6,
+                            "gasPrice": 30 * 10 ** 9,
                             "nonce": 0,
                             "value": 2*10**15,
                         },

@@ -11,7 +11,7 @@ module.exports = {
           process.env.LOCALNET_URL,
           {},
           { shardID: 0, chainId: 2 },
-          { gasLimit: process.env.GAS_LIMIT, gasPrice: process.env.GAS_PRICE }
+          { gasPrice: process.env.GAS_PRICE }
         );
         const newAcc = truffleProvider.addByPrivateKey(
           process.env.LOCALNET_PRIVATE_KEY
@@ -27,7 +27,7 @@ module.exports = {
           process.env.TESTNET_URL,
           {},
           { shardID: 0, chainId: 2 },
-          { gasLimit: process.env.GAS_LIMIT, gasPrice: process.env.GAS_PRICE }
+          { gasPrice: process.env.GAS_PRICE, gasLimit: "30000000" }
         );
         const newAcc = truffleProvider.addByPrivateKey(
           process.env.TESTNET_PRIVATE_KEY
@@ -43,7 +43,7 @@ module.exports = {
           process.env.MAINNET_URL,
           {},
           { shardID: 0, chainId: 1 },
-          { gasLimit: process.env.GAS_LIMIT, gasPrice: process.env.GAS_PRICE }
+          { gasPrice: process.env.GAS_PRICE }
         );
         const newAcc = truffleProvider.addByPrivateKey(
           process.env.MAINNET_PRIVATE_KEY
@@ -62,7 +62,7 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.9", // Fetch exact version from solc-bin (default: truffle's version)
+      version: "0.8.11", // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       // settings: {          // See the solidity docs for advice about optimization and evmVersion
       //  optimizer: {

@@ -59,7 +59,7 @@ def gameInstanceABI(contractArtifacts):
 
 @pytest.fixture(scope="session")
 def w3():
-    return Web3(Web3.WebsocketProvider("wss://ws.s0.pops.one/"))
+    return Web3(Web3.HTTPProvider("https://api.s0.b.hmny.io"))
 
 
 @pytest.fixture(scope="function")
@@ -80,12 +80,12 @@ def prepayedWallets(w3):
                 w3.eth.account.sign_transaction(
                     {
                         "chainId": 1666700000,
-                        "gas": 2 * 10 ** 6,
-                        "gasPrice": 10 ** 9,
+                        "gas": 7 * 10 ** 6,
+                        "gasPrice": 30 * 10 ** 9,
                         "nonce": nonce,
                         "from": BOBS_PUB,
                         "to": wallet.address,
-                        "value": 10 ** 17,
+                        "value": 10 ** 18,
                     },
                     BOBS_PRIV
                 ).rawTransaction)
@@ -105,8 +105,8 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
                 {
                     "from": alice.address,
                     "chainId": 1666700000,
-                    "gas": 2 * 10 ** 6,
-                    "gasPrice": 10 ** 9,
+                    "gas": 7 * 10 ** 6,
+                    "gasPrice": 30 * 10 ** 9,
                     "nonce": 0,
                     "value": 2 * 10 ** 15,
                 },
@@ -134,8 +134,8 @@ def twoPlayers(w3, dmnkContract, prepayedWallets):
                 {
                     "from": bob.address,
                     "chainId": 1666700000,
-                    "gas": 2 * 10 ** 6,
-                    "gasPrice": 10 ** 9,
+                    "gas": 7 * 10 ** 6,
+                    "gasPrice": 30 * 10 ** 9,
                     "nonce": 0,
                     "value": 2 * 10 ** 15,
                 },
