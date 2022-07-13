@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1.2
+
+FROM node:16
+
+# bump the npm version
+RUN npm install --location=global npm@8.13.2
+
+RUN mkdir /usr/app
+WORKDIR /usr/app
+
+RUN npm install --location=global ganache
+
+ENTRYPOINT ganache \
+    -f https://api.s0.b.hmny.io \
+   --networkId=1666700000 \
+   --server.ws \
+   --server.host 0.0.0.0 \
+   --server.port 9000 \
+   -d

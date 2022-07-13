@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1.2
+
+FROM node:18
+
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+RUN yarn global add truffle
+RUN yarn add @harmony-js/core
+RUN yarn add @truffle/hdwallet-provider
+
+COPY contracts contracts
+COPY migrations migrations
+COPY truffle-config.js .
+
+ENTRYPOINT truffle migrate --network localnet --reset --skip-dry-run

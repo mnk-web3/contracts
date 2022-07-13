@@ -20,15 +20,14 @@ function enqGame(GI.GameInstance[] storage queue, GI.GameInstance game) {
     queue.push(game);
 }
 
-function getFirstPendingGame (GI.GameInstance[] storage queue, T.Participant memory participant)
-view
-returns (T.LookupResult memory)
-{
+function getFirstPendingGame(
+    GI.GameInstance[] storage queue,
+    T.Participant memory participant
+) view returns (T.LookupResult memory) {
     for (uint256 counter = 0; counter < queue.length; counter++) {
         GI.GameInstance game = queue[counter];
         T.Participant memory alice = game.getParticipant(T.Role.Alice);
-        bool condition = (
-            participant.addr != alice.addr &&
+        bool condition = (participant.addr != alice.addr &&
             participant.deposit >= alice.range_from &&
             participant.deposit <= alice.range_to &&
             alice.deposit >= participant.range_from &&
@@ -49,7 +48,6 @@ contract DMNK {
     uint256 public completedCounter;
     uint256 public runningCounter;
     uint256 public pendingCounter;
-    
 
     // GI.GameInstance public _instance;
     GI.GameInstance[] _pendingQueue;
@@ -75,7 +73,9 @@ contract DMNK {
     function cancel(address initiator, uint256 deposit) external {
         // msg.sender here is a GameInstance instance
         require(!_runningGames[msg.sender], "Game is running already.");
-        (bool successfullInitiatorRefund, ) = payable(initiator).call{value: deposit}("");
+        (bool successfullInitiatorRefund, ) = payable(initiator).call{
+            value: deposit
+        }("");
         require(successfullInitiatorRefund, "Failed to transfer funds.");
         cancelledCounter += 1;
         pendingCounter -= 1;
@@ -88,7 +88,9 @@ contract DMNK {
         require(_runningGames[msg.sender], "Game does not exist");
         uint256 goesToHouse = gain / 10;
         uint256 goesToWinner = gain - goesToHouse;
-        (bool successWinnerTransfer, ) = payable(winner).call{value: goesToWinner}("");
+        (bool successWinnerTransfer, ) = payable(winner).call{
+            value: goesToWinner
+        }("");
         (bool successHouseTransfer, ) = _minter.call{value: goesToHouse}("");
         require(
             successWinnerTransfer && successHouseTransfer,

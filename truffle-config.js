@@ -1,57 +1,47 @@
-require("dotenv").config();
-
-const { TruffleProvider } = require("@harmony-js/core");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 module.exports = {
   networks: {
     localnet: {
-      network_id: "3",
-      provider: () => {
-        const truffleProvider = new TruffleProvider(
-          process.env.LOCALNET_URL,
-          {},
-          { shardID: 0, chainId: 2 },
-          { gasPrice: process.env.GAS_PRICE }
-        );
-        const newAcc = truffleProvider.addByPrivateKey(
-          process.env.LOCALNET_PRIVATE_KEY
-        );
-        truffleProvider.setSigner(newAcc);
-        return truffleProvider;
-      },
+      network_id: "1666700000",
+      provider: () => 
+        new HDWalletProvider({
+          privateKeys: [process.env.DEPLOYER],
+          providerOrUrl: "http://127.0.0.1:9000",
+        }),
     },
-    testnet: {
-      network_id: "2",
-      provider: () => {
-        const truffleProvider = new TruffleProvider(
-          process.env.TESTNET_URL,
-          {},
-          { shardID: 0, chainId: 2 },
-          { gasPrice: process.env.GAS_PRICE, gasLimit: "30000000" }
-        );
-        const newAcc = truffleProvider.addByPrivateKey(
-          process.env.TESTNET_PRIVATE_KEY
-        );
-        truffleProvider.setSigner(newAcc);
-        return truffleProvider;
-      },
-    },
-    mainnet: {
-      network_id: "1",
-      provider: () => {
-        const truffleProvider = new TruffleProvider(
-          process.env.MAINNET_URL,
-          {},
-          { shardID: 0, chainId: 1 },
-          { gasPrice: process.env.GAS_PRICE }
-        );
-        const newAcc = truffleProvider.addByPrivateKey(
-          process.env.MAINNET_PRIVATE_KEY
-        );
-        truffleProvider.setSigner(newAcc);
-        return truffleProvider;
-      },
-    },
+    // testnet: {
+    //   network_id: "2",
+    //   provider: () => {
+    //     const truffleProvider = new TruffleProvider(
+    //       process.env.TESTNET_URL,
+    //       {},
+    //       { shardID: 0, chainId: 2 },
+    //       { gasPrice: process.env.GAS_PRICE, gasLimit: "30000000" }
+    //     );
+    //     const newAcc = truffleProvider.addByPrivateKey(
+    //       process.env.TESTNET_PRIVATE_KEY
+    //     );
+    //     truffleProvider.setSigner(newAcc);
+    //     return truffleProvider;
+    //   },
+    // },
+    // mainnet: {
+    //   network_id: "1",
+    //   provider: () => {
+    //     const truffleProvider = new TruffleProvider(
+    //       process.env.MAINNET_URL,
+    //       {},
+    //       { shardID: 0, chainId: 1 },
+    //       { gasPrice: process.env.GAS_PRICE }
+    //     );
+    //     const newAcc = truffleProvider.addByPrivateKey(
+    //       process.env.MAINNET_PRIVATE_KEY
+    //     );
+    //     truffleProvider.setSigner(newAcc);
+    //     return truffleProvider;
+    //   },
+    // },
   },
 
   // Set default mocha options here, use special reporters etc.
