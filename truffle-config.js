@@ -6,7 +6,7 @@ module.exports = {
       network_id: "1666700000",
       provider: () => 
         new HDWalletProvider({
-          privateKeys: [process.env.DEPLOYER],
+          privateKeys: ["7ee1a617857facf5948f2c88afdb502cc0c4ff4a90ada4790ebc3f2120fc9695"],
           providerOrUrl: "http://127.0.0.1:9000",
         }),
     },

@@ -10,6 +10,7 @@ RUN yarn global add ganache
 ENTRYPOINT ganache \
     -f https://api.s0.b.hmny.io \
    --networkId=1666700000 \
+   --wallet.accounts="0x7ee1a617857facf5948f2c88afdb502cc0c4ff4a90ada4790ebc3f2120fc9695,1000000000000000000000" \
    --server.ws \
    --server.host 0.0.0.0 \
    --server.port 9000 \

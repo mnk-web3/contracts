@@ -4,8 +4,6 @@ services:
     # Store compilation metadata, which is used by the tester
     volumes:
       - "./build:/usr/src/app/build"
-    environment:
-      - DEPLOYER=4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
     network_mode: host
     image: compiler
     depends_on:
@@ -21,4 +19,4 @@ services:
       - blockchain
     # Reed this to get ABI and contract's address
     volumes:
-      - "./build:/usr/src/app/tests/build"
+      - "./build:/usr/src/app/build"

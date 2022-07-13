@@ -1,6 +1,9 @@
-import web3
+import pytest
 
 
-def test_check():
-    print("hello there")
+pytestmark = pytest.mark.asyncio
+
+
+async def test_check(prepayedWallets):
+    print(prepayedWallets)
     assert True
