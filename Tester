@@ -9,4 +9,4 @@ WORKDIR /usr/app
 RUN pip install pytest web3
 RUN mkdir tests
 
-COPY integration tests
+COPY ./tests/tests tests

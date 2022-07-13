@@ -13,4 +13,6 @@ ENTRYPOINT ganache \
    --server.ws \
    --server.host 0.0.0.0 \
    --server.port 9000 \
+   --miner.blockGasLimit 10000000 \
+   --miner.defaultGasPrice 100000000000 \
    -d

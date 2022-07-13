@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.11;
+pragma solidity =0.8.15;
 
 import "./GameInstance.sol" as GI;
 import "./Types.sol" as T;
