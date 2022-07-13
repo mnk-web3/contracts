@@ -1,14 +1,11 @@
 # syntax=docker/dockerfile:1.2
 
-FROM node:16
-
-# bump the npm version
-RUN npm install --location=global npm@8.13.2
+FROM node:18
 
 RUN mkdir /usr/app
 WORKDIR /usr/app
 
-RUN npm install --location=global ganache
+RUN yarn global add ganache
 
 ENTRYPOINT ganache \
     -f https://api.s0.b.hmny.io \
