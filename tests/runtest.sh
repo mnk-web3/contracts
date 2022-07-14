@@ -11,7 +11,7 @@ docker build -t tester -f Tester . && \
 # compile and deploy contracts
 docker-compose -f ./tests/docker-compose.yml run compiler && \
 # run tests
-docker-compose -f ./tests/docker-compose.yml run tester pytest $*
+docker-compose -f ./tests/docker-compose.yml run tester pytest --asyncio-mode=auto $*
 
 # cleanup
 docker-compose -f ./tests/docker-compose.yml rm -fsv

@@ -1,4 +1,5 @@
 import json
+import typing
 
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -11,9 +12,36 @@ from web3.eth import AsyncEth, Eth
 
 DEPLOYER_PRIVATE = "7ee1a617857facf5948f2c88afdb502cc0c4ff4a90ada4790ebc3f2120fc9695"
 DEPLOYER_PUBLIC = Web3.toChecksumAddress("0x51e2f9277D0718a6eC0FBF0f35b4f4Ea5DDFA325")
+CHAIN_ID = 1337
+GAS_PRICE = 10 ** 11 # 100 GWei
+GAS_LIMIT = 10 ** 7
 
 
 NUMBER_OF_PREPAYED_WALLETS = 2
+
+
+async def create_new_game_and_get_logs(initiator, w3, contract) -> typing.Tuple[typing.Dict[str, typing.Any]]:
+    """Calls `DMNK.new_game()` method and returns logs, embeded into the tx receipt itself.
+    """
+    return contract.events.GameCreated().processReceipt(
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await contract.functions.new_game().build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": 0,
+                        },
+                    ),
+                    initiator.key,
+                ).rawTransaction
+            )
+        )
+    )
 
 
 @dataclass

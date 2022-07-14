@@ -2,33 +2,18 @@ import pytest
 
 from web3.eth import Eth
 
+from .conftest import create_new_game_and_get_logs
+
 
 pytestmark = pytest.mark.asyncio
 
 
 async def test_create_new_game(w3, dmnkContract, prepayedWallets):
     alice, *_ = prepayedWallets
-    # Alice creates a new game
-    txhash = await w3.eth.send_raw_transaction(
-        Eth.account.sign_transaction(
-            await dmnkContract.functions.new_game().build_transaction(
-                {
-                    "from": alice.address,
-                    "chainId": 1337,
-                    "gas": 2 * 10**6,
-                    "gasPrice": 10**9,
-                    "nonce": await w3.eth.get_transaction_count(alice.address),
-                    "value": 0,
-                },
-            ),
-            alice.privateKey,
-        ).rawTransaction
-    )
-    receipt = await w3.eth.wait_for_transaction_receipt(txhash)
-    # First, check that transaction succeeded
-    assert receipt.status, "Transaction did not succeed"
-    # And now, search for the GameCreated event, that being stored on the chain
-    game_created_builder = dmnkContract.events.GameCreated.build_filter()
-    game_created_builder.args["initiator"].match_single(alice.address)
-    async for event in game_created_builder.deploy(w3).get_all_entries():
-        print(event)
+    transaction_logs = await create_new_game_and_get_logs(alice, w3, dmnkContract)
+    # Transaction results in a single log entry, added to the chain
+    assert len(transaction_logs) == 1
+    # This entry contains her address in the "initiator" field
+    assert transaction_logs[0]["args"]["initiator"] == alice.address
+    # And new game instance address
+    assert transaction_logs[0]["args"]["game"]
