@@ -51,12 +51,19 @@ class ABIAddress:
 
 
 @pytest_asyncio.fixture
-def abi_address():
+def dmnk_abi_address():
     with open("./build/info.json") as f:
         address = json.load(f)["address"]
     with open("./build/contracts/DMNK.json") as f:
         abi = json.dumps(json.load(f)["abi"])
-    yield ABIAddress(abi, address)
+    return ABIAddress(abi, address)
+
+
+@pytest_asyncio.fixture
+def game_abi():
+    with open("./build/contracts/GameInstance.json") as f:
+        return json.dumps(json.load(f)["abi"])
+
 
 
 @pytest_asyncio.fixture
@@ -69,8 +76,8 @@ def w3():
 
 
 @pytest_asyncio.fixture
-def dmnkContract(w3, abi_address):
-    return w3.eth.contract(address=abi_address.address, abi=abi_address.abi)
+def dmnkContract(w3, dmnk_abi_address):
+    return w3.eth.contract(address=dmnk_abi_address.address, abi=dmnk_abi_address.abi)
 
 
 @pytest_asyncio.fixture
