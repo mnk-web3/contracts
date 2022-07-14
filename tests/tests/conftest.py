@@ -47,14 +47,12 @@ def dmnkContract(w3, abi_address):
 
 @pytest_asyncio.fixture
 async def prepayedWallets(w3):
-    wallets = [Eth.account.create() for _ in range(NUMBER_OF_PREPAYED_WALLETS)]
-
     nonce = await w3.eth.get_transaction_count(DEPLOYER_PUBLIC)
+    wallets = [Eth.account.create() for _ in range(NUMBER_OF_PREPAYED_WALLETS)]
     for index, wallet in enumerate(wallets):
         await w3.eth.send_raw_transaction(
             Eth.account.sign_transaction(
                 {
-                    "chainId": 1666700000,
                     "gas": 10 * 10 ** 6,
                     "gasPrice": 300 * 10 ** 9,
                     "nonce": nonce + index,
@@ -66,7 +64,7 @@ async def prepayedWallets(w3):
                 DEPLOYER_PRIVATE,
             ).rawTransaction
         )
-    yield wallets
+    return wallets
 
 
 # @pytest.fixture(scope="function")
