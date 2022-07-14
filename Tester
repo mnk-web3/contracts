@@ -6,7 +6,7 @@ FROM python:3.10
 RUN mkdir /usr/src/app
 WORKDIR /usr/src/app
 
-RUN pip install pytest pytest-asyncio web3
+RUN pip install pytest pytest-asyncio git+https://github.com/ethereum/web3.py.git@master
 RUN mkdir tests
 
 COPY ./tests/tests tests

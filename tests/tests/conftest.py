@@ -33,7 +33,7 @@ def abi_address():
 
 @pytest_asyncio.fixture
 def w3():
-    yield Web3(
+    return Web3(
         Web3.AsyncHTTPProvider("http://127.0.0.1:9000"),
         modules={"eth": (AsyncEth,)},
         middlewares=[],
@@ -42,7 +42,7 @@ def w3():
 
 @pytest_asyncio.fixture
 def dmnkContract(w3, abi_address):
-    yield w3.eth.contract(address=abi_address.address, abi=abi_address.abi)
+    return w3.eth.contract(address=abi_address.address, abi=abi_address.abi)
 
 
 @pytest_asyncio.fixture

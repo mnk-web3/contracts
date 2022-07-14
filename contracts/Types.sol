@@ -18,8 +18,6 @@ struct LookupResult {
 struct Participant {
     address addr;
     uint256 deposit;
-    uint256 range_from;
-    uint256 range_to;
 }
 
 enum Role {
