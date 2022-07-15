@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from dataclasses import dataclass
@@ -16,7 +17,72 @@ GAS_PRICE = 10 ** 11 # 100 GWei
 GAS_LIMIT = 10 ** 7
 
 
-NUMBER_OF_PREPAYED_WALLETS = 2
+NUMBER_OF_PREPAYED_WALLETS = 3
+
+
+async def create_game_and_get_logs(initiator, main_contract, w3):
+    return main_contract.events.GameCreated().processReceipt(
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await main_contract.functions.new_game().build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": 0,
+                        },
+                    ),
+                    initiator.key,
+                ).rawTransaction
+            )
+        )
+    )
+
+
+async def join_and_get_receipt(initiator, game_instance, w3):
+    return (
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await game_instance.functions.join().build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": 10**18,
+                        },
+                    ),
+                    initiator.key,
+                ).rawTransaction
+            )
+        )
+    )
+
+
+async def join_and_get_logs(initiator, game_instance, w3):
+    return (
+        game_instance
+            .events
+            .PlayerJoined()
+            .processReceipt(
+                await join_and_get_receipt(initiator, game_instance, w3)
+            )
+    )
+
+
+# Override the pytest-asyncio event_loop fixture to make it session scoped. This is required in order to enable
+# async test fixtures with a session scope. More info: https://github.com/pytest-dev/pytest-asyncio/issues/68
+@pytest.fixture(scope="session")
+def event_loop(request):
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
 
 @dataclass
 class ABIAddress:
@@ -53,25 +119,7 @@ def w3():
 async def started_game(w3, dmnkContract, game_abi, prepayedWallets):
     alice, bob, *_ = prepayedWallets
     # Alice creates the new game
-    game_created_logs = dmnkContract.events.GameCreated().processReceipt(
-        await w3.eth.wait_for_transaction_receipt(
-            await w3.eth.send_raw_transaction(
-                Eth.account.sign_transaction(
-                    await dmnkContract.functions.new_game().build_transaction(
-                        {
-                            "from": alice.address,
-                            "chainId": CHAIN_ID,
-                            "gas": GAS_LIMIT,
-                            "gasPrice": GAS_PRICE,
-                            "nonce": await w3.eth.get_transaction_count(alice.address),
-                            "value": 0,
-                        },
-                    ),
-                    alice.key,
-                ).rawTransaction
-            )
-        )
-    )
+    game_created_logs = await create_game_and_get_logs(alice, dmnkContract, w3)
     game_instance = w3.eth.contract(address=game_created_logs[0]["args"]["game"], abi=game_abi)
     # Alice and Bob join the game, first Alice and then Bob
     for wallet in [alice, bob]:
