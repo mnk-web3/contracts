@@ -27,6 +27,14 @@ struct State {
 }
 
 
+struct Settings {
+    uint8 m;
+    uint8 n;
+    uint8 k;
+}
+
+
+
 contract GameInstance {
     // Bid, initialy (while game status == GameStatus.Created) is set to 0
     uint256 private _bid;
@@ -34,6 +42,8 @@ contract GameInstance {
     mapping(Role => address) private _participants;
     // State of the game itself
     State private _state;
+    // Size of the game field and the winning row length
+    Settings private _settings;
 
     event PlayerJoined(address game, address player);
     event GameCancelled(address game);
@@ -67,6 +77,10 @@ contract GameInstance {
         return (_participants[Role.Alice], _participants[Role.Bob]);
     }
 
+    function get_mnk() view public returns (uint8, uint8, uint8) {
+        return (_settings.m, _settings.n, _settings.k);
+    }
+
     function cancel_game() public {
         require(
             _state.status == GameStatus.Created || _state.status == GameStatus.Waiting,
@@ -82,7 +96,11 @@ contract GameInstance {
         emit GameCancelled(address(this));
     }
 
-    constructor() {
+    constructor(uint8 m, uint8 n, uint8 k) {
+        require(
+            k <= m && k <= n && m > 0 && n > 0 && k > 0,
+            "K should be <= N && <= M and > 0"
+        );
         // The one, who created the game becomes Alice
         _participants[Role.Alice] = tx.origin;
         // At this stage Bob is still unknown
@@ -90,6 +108,9 @@ contract GameInstance {
         _state = State({
             currentTurn: Role.Alice,
             status: GameStatus.Created
+        });
+        _settings = Settings({
+            m: m, n: n, k: k
         });
     }
 }

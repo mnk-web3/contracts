@@ -15,8 +15,8 @@ contract DMNK {
         return _known_games[game];
     }
 
-    function new_game() public {
-        GI.GameInstance game = new GI.GameInstance();
+    function new_game(uint8 m, uint8 n, uint8 k) public {
+        GI.GameInstance game = new GI.GameInstance(m, n, k);
         _known_games[address(game)] = true;
         emit GameCreated(address(game), tx.origin);
     }

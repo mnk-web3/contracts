@@ -43,12 +43,12 @@ async def cancel_game_and_get_receipt(w3, game_instance, initiator):
     )
 
 
-async def create_game_and_get_logs(initiator, main_contract, w3):
-    return main_contract.events.GameCreated().processReceipt(
+async def create_game_and_get_receipt(w3, main_contract, initiator, m=20, n=20, k=5):
+    return (
         await w3.eth.wait_for_transaction_receipt(
             await w3.eth.send_raw_transaction(
                 Eth.account.sign_transaction(
-                    await main_contract.functions.new_game().build_transaction(
+                    await main_contract.functions.new_game(m, n, k).build_transaction(
                         {
                             "from": initiator.address,
                             "chainId": CHAIN_ID,
@@ -62,6 +62,17 @@ async def create_game_and_get_logs(initiator, main_contract, w3):
                 ).rawTransaction
             )
         )
+    )
+
+
+async def create_game_and_get_logs(w3, main_contract, initiator, m=20, n=20, k=5):
+    return (
+        main_contract
+            .events
+            .GameCreated()
+            .processReceipt(
+                await create_game_and_get_receipt(w3, main_contract, initiator, m, n, k)
+            )
     )
 
 
@@ -140,18 +151,18 @@ def w3():
 
 @pytest.fixture(scope="function")
 def get_game_created(w3, dmnkContract, game_abi):
-    async def inner(initiator):
+    async def inner(initiator, m=20, n=20, k=5):
         # Alice creates the new game
-        game_created_logs = await create_game_and_get_logs(initiator, dmnkContract, w3)
+        game_created_logs = await create_game_and_get_logs(w3, dmnkContract, initiator, m, n, k)
         return w3.eth.contract(address=game_created_logs[0]["args"]["game"], abi=game_abi)
     return inner
 
 
 @pytest.fixture(scope="function")
 def get_game_waiting(w3, get_game_created):
-    async def inner(initiator, bid=DEFAULT_BID):
+    async def inner(initiator, m=20, n=20, k=5, bid=DEFAULT_BID):
         # Alice creates the new game
-        game = await get_game_created(initiator=initiator)
+        game = await get_game_created(initiator=initiator, m=m, n=n, k=k)
         await w3.eth.send_raw_transaction(
             Eth.account.sign_transaction(
                 await game
@@ -176,8 +187,8 @@ def get_game_waiting(w3, get_game_created):
 
 @pytest.fixture(scope="function")
 async def get_game_running(w3, get_game_waiting):
-    async def inner(initiator, follower, bid=DEFAULT_BID):
-        game = await get_game_waiting(initiator=initiator, bid=bid)
+    async def inner(initiator, follower, m=20, n=20, k=5, bid=DEFAULT_BID):
+        game = await get_game_waiting(initiator=initiator, m=m, n=n, k=k, bid=bid)
         await w3.eth.wait_for_transaction_receipt(
             await w3.eth.send_raw_transaction(
                 Eth.account.sign_transaction(
