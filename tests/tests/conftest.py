@@ -138,11 +138,12 @@ def w3():
 
 
 @pytest.fixture(scope="function")
-async def game_in_created_state(w3, dmnkContract, game_abi, prepayedWallets):
-    alice, bob, *_ = prepayedWallets
-    # Alice creates the new game
-    game_created_logs = await create_game_and_get_logs(alice, dmnkContract, w3)
-    return w3.eth.contract(address=game_created_logs[0]["args"]["game"], abi=game_abi)
+async def game_in_created_state(w3, dmnkContract, game_abi):
+    async def inner(initiator):
+        # Alice creates the new game
+        game_created_logs = await create_game_and_get_logs(initiator, dmnkContract, w3)
+        return w3.eth.contract(address=game_created_logs[0]["args"]["game"], abi=game_abi)
+    return inner
 
 
 @pytest.fixture(scope="function")
@@ -151,16 +152,19 @@ async def game_in_waiting_state(w3, game_in_created_state, prepayedWallets):
     # Alice creates the new game
     await w3.eth.send_raw_transaction(
         Eth.account.sign_transaction(
-            await game_in_created_state.functions.join().build_transaction(
-                {
-                    "from": alice.address,
-                    "chainId": CHAIN_ID,
-                    "gas": GAS_LIMIT,
-                    "gasPrice": GAS_PRICE,
-                    "nonce": await w3.eth.get_transaction_count(alice.address),
-                    "value": 10**18,
-                },
-            ),
+            (await game_in_created_state(initiator=alice))
+                .functions
+                .join()
+                .build_transaction(
+                    {
+                        "from": alice.address,
+                        "chainId": CHAIN_ID,
+                        "gas": GAS_LIMIT,
+                        "gasPrice": GAS_PRICE,
+                        "nonce": await w3.eth.get_transaction_count(alice.address),
+                        "value": 10**18,
+                    },
+                ),
             alice.key,
         ).rawTransaction
     )
