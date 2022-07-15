@@ -68,6 +68,35 @@ async def test_can_create_game(get_game_created, prepayed_wallets):
     )
 
 
+async def test_can_cancel_created_game(w3, get_game_created, prepayed_wallets):
+    alice, *_ = prepayed_wallets
+    game = await get_game_created(alice)
+    assert (await cancel_game_and_get_receipt(w3, game, alice)).status
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.aborted
+
+
+async def test_can_cancel_waiting_game(w3, get_game_waiting, prepayed_wallets):
+    alice, *_ = prepayed_wallets
+    game = await get_game_waiting(alice)
+    assert (await cancel_game_and_get_receipt(w3, game, alice)).status
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.aborted
+
+
+async def test_cannot_cancel_running_game(get_game_running, prepayed_wallets, w3):
+    alice, bob, charly, *_ = prepayed_wallets
+    game = await get_game_running(alice, bob)
+    assert not (await cancel_game_and_get_receipt(w3, game, alice)).status
+    assert not (await cancel_game_and_get_receipt(w3, game, bob)).status
+    assert not (await cancel_game_and_get_receipt(w3, game, charly)).status
+
+
+async def test_initiator_inits_game(w3, get_game_created, prepayed_wallets):
+    alice, bob, *_ = prepayed_wallets
+    game = await get_game_created(alice)
+    # Alice should have called JOIN now, not bob
+    assert not (await join_and_get_receipt(w3, game, bob))["status"]
+
+
 async def test_can_init_game(get_game_waiting, prepayed_wallets):
     alice, *_ = prepayed_wallets
     game = await get_game_waiting(alice)
@@ -102,12 +131,3 @@ async def test_cannot_join_running_game(get_game_running, prepayed_wallets, w3):
     assert not (await join_and_get_receipt(w3, game, alice)).status
     assert not (await join_and_get_receipt(w3, game, bob)).status
     assert not (await join_and_get_receipt(w3, game, charly)).status
-
-
-# After the game have reached it's RUNNING state it is no longer possible to CANCEL
-async def test_cannot_cancel_running_game(get_game_running, prepayed_wallets, w3):
-    alice, bob, charly, *_ = prepayed_wallets
-    game = await get_game_running(alice, bob)
-    assert not (await cancel_game_and_get_receipt(alice, game, w3)).status
-    assert not (await cancel_game_and_get_receipt(bob, game, w3)).status
-    assert not (await cancel_game_and_get_receipt(charly, game, w3)).status

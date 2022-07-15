@@ -21,7 +21,7 @@ DEFAULT_BID = 10 ** 18
 NUMBER_OF_PREPAYED_WALLETS = 3
 
 
-async def cancel_game_and_get_receipt(initiator, game_instance, w3):
+async def cancel_game_and_get_receipt(w3, game_instance, initiator):
     return (
         await w3.eth.wait_for_transaction_receipt(
             await w3.eth.send_raw_transaction(
@@ -33,7 +33,7 @@ async def cancel_game_and_get_receipt(initiator, game_instance, w3):
                             "gas": GAS_LIMIT,
                             "gasPrice": GAS_PRICE,
                             "nonce": await w3.eth.get_transaction_count(initiator.address),
-                            "value": 10**18,
+                            "value": 0,
                         },
                     ),
                     initiator.key,
