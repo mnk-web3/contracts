@@ -15,6 +15,7 @@ DEPLOYER_PUBLIC = Web3.toChecksumAddress("0x51e2f9277D0718a6eC0FBF0f35b4f4Ea5DDF
 CHAIN_ID = 1337
 GAS_PRICE = 10 ** 11 # 100 GWei
 GAS_LIMIT = 10 ** 7
+DEFAULT_BID = 10 ** 18
 
 
 NUMBER_OF_PREPAYED_WALLETS = 3
@@ -64,7 +65,7 @@ async def create_game_and_get_logs(initiator, main_contract, w3):
     )
 
 
-async def join_and_get_receipt(initiator, game_instance, w3):
+async def join_and_get_receipt(w3, game_instance, initiator):
     return (
         await w3.eth.wait_for_transaction_receipt(
             await w3.eth.send_raw_transaction(
@@ -92,7 +93,7 @@ async def join_and_get_logs(initiator, game_instance, w3):
             .events
             .PlayerJoined()
             .processReceipt(
-                await join_and_get_receipt(initiator, game_instance, w3)
+                await join_and_get_receipt(w3, game_instance, initiator)
             )
     )
 
@@ -138,7 +139,7 @@ def w3():
 
 
 @pytest.fixture(scope="function")
-async def game_in_created_state(w3, dmnkContract, game_abi):
+def get_game_created(w3, dmnkContract, game_abi):
     async def inner(initiator):
         # Alice creates the new game
         game_created_logs = await create_game_and_get_logs(initiator, dmnkContract, w3)
@@ -147,52 +148,58 @@ async def game_in_created_state(w3, dmnkContract, game_abi):
 
 
 @pytest.fixture(scope="function")
-async def game_in_waiting_state(w3, game_in_created_state, prepayedWallets):
-    alice, bob, *_ = prepayedWallets
-    # Alice creates the new game
-    await w3.eth.send_raw_transaction(
-        Eth.account.sign_transaction(
-            (await game_in_created_state(initiator=alice))
-                .functions
-                .join()
-                .build_transaction(
-                    {
-                        "from": alice.address,
-                        "chainId": CHAIN_ID,
-                        "gas": GAS_LIMIT,
-                        "gasPrice": GAS_PRICE,
-                        "nonce": await w3.eth.get_transaction_count(alice.address),
-                        "value": 10**18,
-                    },
-                ),
-            alice.key,
-        ).rawTransaction
-    )
-    return game_in_created_state
+def get_game_waiting(w3, get_game_created):
+    async def inner(initiator, bid=DEFAULT_BID):
+        # Alice creates the new game
+        game = await get_game_created(initiator=initiator)
+        await w3.eth.send_raw_transaction(
+            Eth.account.sign_transaction(
+                await game
+                    .functions
+                    .join()
+                    .build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": bid
+                        },
+                    ),
+                initiator.key,
+            ).rawTransaction
+        )
+        return game
+    return inner
 
 
 @pytest.fixture(scope="function")
-async def started_game(w3, game_in_waiting_state, prepayedWallets):
-    alice, bob, *_ = prepayedWallets
-    # Alice and Bob join the game, first Alice and then Bob
-    await w3.eth.wait_for_transaction_receipt(
-        await w3.eth.send_raw_transaction(
-            Eth.account.sign_transaction(
-                await game_in_waiting_state.functions.join().build_transaction(
-                    {
-                        "from": bob.address,
-                        "chainId": CHAIN_ID,
-                        "gas": GAS_LIMIT,
-                        "gasPrice": GAS_PRICE,
-                        "nonce": await w3.eth.get_transaction_count(bob.address),
-                        "value": 10**18,
-                    },
-                ),
-                bob.key,
-            ).rawTransaction
+async def get_game_running(w3, get_game_waiting):
+    async def inner(initiator, follower, bid=DEFAULT_BID):
+        game = await get_game_waiting(initiator=initiator, bid=bid)
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await game
+                        .functions
+                        .join()
+                        .build_transaction(
+                            {
+                                "from": follower.address,
+                                "chainId": CHAIN_ID,
+                                "gas": GAS_LIMIT,
+                                "gasPrice": GAS_PRICE,
+                                "nonce": await w3.eth.get_transaction_count(follower.address),
+                                "value": bid,
+                            },
+                        ),
+                    follower.key,
+                ).rawTransaction
+            )
         )
-    )
-    return alice, bob, game_in_waiting_state
+        return game
+    return inner
 
 
 @pytest.fixture
@@ -201,7 +208,7 @@ def dmnkContract(w3, dmnk_abi_address):
 
 
 @pytest.fixture(scope="function")
-async def prepayedWallets(w3):
+async def prepayed_wallets(w3):
     nonce = await w3.eth.get_transaction_count(DEPLOYER_PUBLIC)
     wallets = [Eth.account.create() for _ in range(NUMBER_OF_PREPAYED_WALLETS)]
     for index, wallet in enumerate(wallets):

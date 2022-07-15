@@ -23,8 +23,8 @@ class GameStatus(enum.IntEnum):
     aborted = 4
 
 
-async def test_creat_and_join_the_game(w3, dmnkContract, prepayedWallets, game_abi):
-    alice, bob, *_ = prepayedWallets
+async def test_creat_and_join_the_game(w3, dmnkContract, prepayed_wallets, game_abi):
+    alice, bob, *_ = prepayed_wallets
     transaction_logs = await create_game_and_get_logs(alice, dmnkContract, w3)
     # Transaction results in a single log entry, added to the chain
     assert len(transaction_logs) == 1
@@ -58,22 +58,56 @@ async def test_creat_and_join_the_game(w3, dmnkContract, prepayedWallets, game_a
     assert await game_instance.functions.get_players().call() == [alice.address, bob.address]
 
 
-async def test_cannot_join_running_game(started_game, prepayedWallets, w3):
-    _, _, charly, *_ = prepayedWallets
-    alice, bob, game = started_game
-    assert not (await join_and_get_receipt(alice, game, w3)).status
-    assert not (await join_and_get_receipt(bob, game, w3)).status
-    assert not (await join_and_get_receipt(charly, game, w3)).status
+async def test_can_create_game(get_game_created, prepayed_wallets):
+    alice, *_ = prepayed_wallets
+    game = await get_game_created(alice)
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.created
+    assert (
+        await game.functions.get_players().call() ==
+        [alice.address, "0x0000000000000000000000000000000000000000"]
+    )
 
 
-async def test_cannot_cancel_running_game(started_game, prepayedWallets, w3):
-    _, _, charly, *_ = prepayedWallets
-    alice, bob, game = started_game
+async def test_can_init_game(get_game_waiting, prepayed_wallets):
+    alice, *_ = prepayed_wallets
+    game = await get_game_waiting(alice)
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.waiting
+    assert (
+        await game.functions.get_players().call() ==
+        [alice.address, "0x0000000000000000000000000000000000000000"]
+    )
+
+
+async def test_can_join_game(get_game_running, prepayed_wallets):
+    alice, bob, *_ = prepayed_wallets
+    game = await get_game_running(alice, bob)
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running
+    assert (
+        await game.functions.get_players().call() ==
+        [alice.address, bob.address]
+    )
+
+
+# After the game have reached it's WAITING state the initiator wont able to call JOIN again
+async def test_cannot_play_with_yourself(get_game_waiting, prepayed_wallets, w3):
+    alice, *_ = prepayed_wallets
+    game = await get_game_waiting(alice)
+    assert not (await join_and_get_receipt(w3, game, alice)).status
+
+
+# After the game have reached it's RUNNING state it is no longer possible to JOIN
+async def test_cannot_join_running_game(get_game_running, prepayed_wallets, w3):
+    alice, bob, charly, *_ = prepayed_wallets
+    game = await get_game_running(alice, bob)
+    assert not (await join_and_get_receipt(w3, game, alice)).status
+    assert not (await join_and_get_receipt(w3, game, bob)).status
+    assert not (await join_and_get_receipt(w3, game, charly)).status
+
+
+# After the game have reached it's RUNNING state it is no longer possible to CANCEL
+async def test_cannot_cancel_running_game(get_game_running, prepayed_wallets, w3):
+    alice, bob, charly, *_ = prepayed_wallets
+    game = await get_game_running(alice, bob)
     assert not (await cancel_game_and_get_receipt(alice, game, w3)).status
     assert not (await cancel_game_and_get_receipt(bob, game, w3)).status
     assert not (await cancel_game_and_get_receipt(charly, game, w3)).status
-
-
-# async def test_started_game0(started_game, prepayedWallets):
-#     alice, bob, game = started_game
-#     assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running
