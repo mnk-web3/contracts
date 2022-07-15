@@ -5,7 +5,10 @@ import pytest
 from web3.eth import Eth
 
 from .conftest import (
-    join_and_get_logs, create_game_and_get_logs,
+    join_and_get_logs,
+    join_and_get_receipt,
+    cancel_game_and_get_receipt,
+    create_game_and_get_logs,
     CHAIN_ID, GAS_LIMIT, GAS_PRICE
 )
 
@@ -51,13 +54,26 @@ async def test_creat_and_join_the_game(w3, dmnkContract, prepayedWallets, game_a
     assert bob_joins_logs[0]["args"]["player"] == bob.address
     # Game now should be in "running" status
     assert GameStatus(await game_instance.functions.get_game_status().call()) == GameStatus.running
+    # Players are Alice and Bob indeed
+    assert await game_instance.functions.get_players().call() == [alice.address, bob.address]
 
 
-async def test_started_game1(started_game):
+async def test_cannot_join_running_game(started_game, prepayedWallets, w3):
+    _, _, charly, *_ = prepayedWallets
     alice, bob, game = started_game
-    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running
+    assert not (await join_and_get_receipt(alice, game, w3)).status
+    assert not (await join_and_get_receipt(bob, game, w3)).status
+    assert not (await join_and_get_receipt(charly, game, w3)).status
 
 
-async def test_started_game0(started_game):
+async def test_cannot_cancel_running_game(started_game, prepayedWallets, w3):
+    _, _, charly, *_ = prepayedWallets
     alice, bob, game = started_game
-    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running
+    assert not (await cancel_game_and_get_receipt(alice, game, w3)).status
+    assert not (await cancel_game_and_get_receipt(bob, game, w3)).status
+    assert not (await cancel_game_and_get_receipt(charly, game, w3)).status
+
+
+# async def test_started_game0(started_game, prepayedWallets):
+#     alice, bob, game = started_game
+#     assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running

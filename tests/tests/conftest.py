@@ -20,6 +20,28 @@ GAS_LIMIT = 10 ** 7
 NUMBER_OF_PREPAYED_WALLETS = 3
 
 
+async def cancel_game_and_get_receipt(initiator, game_instance, w3):
+    return (
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await game_instance.functions.cancel_game().build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": 10**18,
+                        },
+                    ),
+                    initiator.key,
+                ).rawTransaction
+            )
+        )
+    )
+
+
 async def create_game_and_get_logs(initiator, main_contract, w3):
     return main_contract.events.GameCreated().processReceipt(
         await w3.eth.wait_for_transaction_receipt(

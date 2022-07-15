@@ -63,6 +63,10 @@ contract GameInstance {
         return _state.status;
     }
 
+    function get_players() view public returns (address, address) {
+        return (_participants[Role.Alice], _participants[Role.Bob]);
+    }
+
     function cancel_game() public {
         require(
             _state.status == GameStatus.Created || _state.status == GameStatus.Waiting,
