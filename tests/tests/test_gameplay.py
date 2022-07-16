@@ -41,17 +41,54 @@ class BobMove(Move):
     pass
 
 
-async def test_cannot_move_wrong_turn(w3, get_game_running, prepayed_wallets):
-    alice, bob, *_ = prepayed_wallets
-    game = await get_game_running(alice, bob, 3, 3, 3)
-    # This should be rejected, current turn is alice's
-    assert not (await append_move_and_get_receipt(w3, game, bob, 0, 0))["status"]
-    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.running
-
-
 @pytest.mark.parametrize(
     "settings,moves,who_wins",
     [
+        pytest.param(
+            GameSettings(m=3, n=3, k=3),
+            [
+                BobMove(0, 0, status=False),  # alice supposed to add here move first
+            ],
+            WhoWon.noone,
+            id="move_wrong_turn",
+        ),
+        pytest.param(
+            GameSettings(m=3, n=3, k=3),
+            [
+                AliceMove(0, 0),
+            ],
+            WhoWon.noone,
+            id="game_is_still_in_progress",
+        ),
+        # Field is trivial, so alice wins immediately
+        pytest.param(
+            GameSettings(m=1, n=1, k=1),
+            [
+                AliceMove(0, 0, is_winner=True),
+            ],
+            WhoWon.alice,
+            id="degenerate_case",
+        ),
+        # Field is trivial, so alice wins immediately and afterwards she's trying to add another move
+        pytest.param(
+            GameSettings(m=1, n=1, k=1),
+            [
+                AliceMove(0, 0, is_winner=True),
+                AliceMove(0, 0, status=False),  # This move should fail as the game is now Completed
+            ],
+            WhoWon.alice,
+            id="degenerate_case_no_move_after_win_alice",
+        ),
+        # Field is trivial, so alice wins immediately and afterwards she's trying to add another move
+        pytest.param(
+            GameSettings(m=1, n=1, k=1),
+            [
+                AliceMove(0, 0, is_winner=True),
+                BobMove(0, 0, status=False),  # This move should fail as the game is now Completed
+            ],
+            WhoWon.alice,
+            id="degenerate_case_no_move_after_win_bob",
+        ),
         pytest.param(
             GameSettings(m=3, n=3, k=3),
             [
@@ -78,8 +115,14 @@ async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves,
                 y=move.y,
             )
         )
+        # Check the transaction is actully ok
         assert bool(receipt["status"]) == move.status
-
+        # if it is, there must be a bunch of logged info
+        if move.status:
+            logs = game.events.MoveAppended().processReceipt(receipt)
+            assert len(logs) == 1
+            assert logs[0]["args"]["is_winner"] == move.is_winner
+    
     match who_wins:
         case WhoWon.alice: winner_address = alice.address
         case WhoWon.bob: winner_address = bob.address

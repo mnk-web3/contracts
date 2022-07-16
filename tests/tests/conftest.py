@@ -52,13 +52,13 @@ async def append_move_and_get_receipt(w3, game_instance, initiator, x, y):
     )
 
 
-async def append_move_and_get_logs(w3, main_contract, initiator, x, y):
+async def append_move_and_get_logs(w3, game_instance, initiator, x, y):
     return (
-        main_contract
+        game_instance
             .events
             .MoveAppended()
             .processReceipt(
-                await append_move_and_get_receipt(w3, main_contract, initiator, x, y)
+                await append_move_and_get_receipt(w3, game_instance, initiator, x, y)
             )
     )
 
