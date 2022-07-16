@@ -1,4 +1,5 @@
 import asyncio
+import enum
 import json
 
 from dataclasses import dataclass
@@ -19,6 +20,47 @@ DEFAULT_BID = 10 ** 18
 
 
 NUMBER_OF_PREPAYED_WALLETS = 3
+
+
+class GameStatus(enum.IntEnum):
+    created = 0
+    waiting = 1
+    running = 2
+    completed = 3
+    aborted = 4
+
+
+async def append_move_and_get_receipt(w3, game_instance, initiator, x, y):
+    return (
+        await w3.eth.wait_for_transaction_receipt(
+            await w3.eth.send_raw_transaction(
+                Eth.account.sign_transaction(
+                    await game_instance.functions.append_move(x, y).build_transaction(
+                        {
+                            "from": initiator.address,
+                            "chainId": CHAIN_ID,
+                            "gas": GAS_LIMIT,
+                            "gasPrice": GAS_PRICE,
+                            "nonce": await w3.eth.get_transaction_count(initiator.address),
+                            "value": 0,
+                        },
+                    ),
+                    initiator.key,
+                ).rawTransaction
+            )
+        )
+    )
+
+
+async def append_move_and_get_logs(w3, main_contract, initiator, x, y):
+    return (
+        main_contract
+            .events
+            .MoveAppended()
+            .processReceipt(
+                await append_move_and_get_receipt(w3, main_contract, initiator, x, y)
+            )
+    )
 
 
 async def cancel_game_and_get_receipt(w3, game_instance, initiator):

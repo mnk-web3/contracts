@@ -186,7 +186,7 @@ contract GameInstance {
 
     event PlayerJoined(address game, address player);
     event GameCancelled(address game);
-    event Move(address player, uint8 x, uint8 y);
+    event MoveAppended(address player, uint8 x, uint8 y);
 
     function append_move(uint8 x, uint8 y) external {
         require( _state.status == GameStatus.Running, "This game is not running.");
@@ -204,7 +204,7 @@ contract GameInstance {
         );
 
         _moves[x][y] = _state.currentTurn;
-        emit Move(msg.sender, x, y);
+        emit MoveAppended(msg.sender, x, y);
     
         // Check if the current player just won the game
         if (check_winner(_moves, x, y, _state.currentTurn, _settings)) {
