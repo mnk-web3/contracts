@@ -186,29 +186,25 @@ contract GameInstance {
 
     event PlayerJoined(address game, address player);
     event GameCancelled(address game);
-    event MoveAppended(address player, uint8 x, uint8 y);
+    event MoveAppended(address game, address player, uint8 x, uint8 y, bool is_winner);
 
-    function append_move(uint8 x, uint8 y) external {
+    function append_move(uint8 x, uint8 y) public {
         require( _state.status == GameStatus.Running, "This game is not running.");
         // If it is running, check that the caller is elidable to call
         require(_participants[_state.currentTurn] == tx.origin, "This is not your turn, bud.");
         // Check that the move is inbounds
         require(
-            x < _settings.m && y < _settings.n && x >= 0 && y >= 0,
-            "This move is outside the game board."
+            x < _settings.m && y < _settings.n && x >= 0 && y >= 0, "This move is outside the game board."
         );
-        // Check that this move hasnt been done yet
-        require(
-            !is_move_exists(_moves, x, y),
-            "This move has been played already."
-        );
+        // Check that the move hasnt been taken yet
+        require(!is_move_exists(_moves, x, y), "This move has been already taken.");
 
         _moves[x][y] = _state.currentTurn;
-        emit MoveAppended(msg.sender, x, y);
     
         // Check if the current player just won the game
         if (check_winner(_moves, x, y, _state.currentTurn, _settings)) {
             _state.status = GameStatus.Completed;
+            emit MoveAppended(address(this), tx.origin, x, y, true);
         } else {
             // Switch the player
             if (_state.currentTurn == Role.Alice) {
@@ -216,6 +212,7 @@ contract GameInstance {
             } else {
                 _state.currentTurn = Role.Alice;
             }
+            emit MoveAppended(address(this), tx.origin, x, y, false);
         }
     }
 
@@ -246,6 +243,13 @@ contract GameInstance {
 
     function get_players() view public returns (address, address) {
         return (_participants[Role.Alice], _participants[Role.Bob]);
+    }
+
+    function get_winner() view public returns (address) {
+        if (_state.status != GameStatus.Completed) {
+            return address(0x0);
+        }
+        return this.get_current_player();
     }
 
     function get_mnk() view public returns (uint8, uint8, uint8) {
