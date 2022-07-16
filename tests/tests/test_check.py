@@ -140,11 +140,19 @@ async def test_can_join_game(get_game_running, prepayed_wallets):
     )
 
 
+async def test_cannot_join_game_with_invalid_bi(w3, get_game_waiting, prepayed_wallets):
+    alice, bob, *_ = prepayed_wallets
+    game = await get_game_waiting(alice, bid=10**18)
+    assert not (await join_and_get_receipt(w3, game, bob, bid=10**17)).status
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.waiting
+
+
 # After the game have reached it's WAITING state the initiator wont able to call JOIN again
 async def test_cannot_play_with_yourself(get_game_waiting, prepayed_wallets, w3):
     alice, *_ = prepayed_wallets
     game = await get_game_waiting(alice)
     assert not (await join_and_get_receipt(w3, game, alice)).status
+    assert GameStatus(await game.functions.get_game_status().call()) == GameStatus.waiting
 
 
 # After the game have reached it's RUNNING state it is no longer possible to JOIN

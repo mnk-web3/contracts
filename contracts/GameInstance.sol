@@ -34,19 +34,190 @@ struct Settings {
 }
 
 
+function is_move_exists(
+    mapping(uint8 => mapping(uint8 => Role)) storage moves,
+    uint8 x,
+    uint8 y
+) view returns (bool) {
+    return (moves[x][y] == Role.Alice || moves[x][y] == Role.Bob);
+}
+
+
+function check_winner(
+    mapping(uint8 => mapping(uint8 => Role)) storage moves,
+    uint8 x,
+    uint8 y,
+    Role turn,
+    Settings storage settings
+) view returns (bool) {
+    // Check verticals
+    // 0x0
+    // 0x0
+    // 0x0
+    uint8 verticalCounter = 0;
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x][y + shift] == turn) {
+            verticalCounter++;
+        } else {
+            break;
+        }
+        if (y + shift == settings.n - 1) {
+            break;
+        }
+    }
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x][y - shift] == turn) {
+            verticalCounter++;
+        } else {
+            break;
+        }
+        if (y - shift == 0) {
+            break;
+        }
+    }
+    verticalCounter--;
+    if (verticalCounter >= settings.k) {
+        return true;
+    }
+
+    // Check horizontals
+    // 000
+    // xxx
+    // 000
+    uint8 horizontalCounter = 0;
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x + shift][y] == turn) {
+            horizontalCounter++;
+        } else {
+            break;
+        }
+        if (x + shift == settings.m - 1) {
+            break;
+        }
+    }
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x - shift][y] == turn) {
+            horizontalCounter++;
+        } else {
+            break;
+        }
+        if (x - shift == 0) {
+            break;
+        }
+    }
+    horizontalCounter--;
+    if (horizontalCounter >= settings.k) {
+        return true;
+    }
+
+    // Check first diagonal
+    // x00
+    // 0x0
+    // 00x
+    uint8 firstDiagonalCounter = 0;
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x - shift][y + shift] == turn) {
+            firstDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x - shift == 0) || (y + shift == settings.n - 1)) {
+            break;
+        }
+    }
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x + shift][y - shift] == turn) {
+            firstDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x + shift == settings.m - 1) || (y - shift == 0)) {
+            break;
+        }
+    }
+    firstDiagonalCounter--;
+    if (firstDiagonalCounter >= settings.k) {
+        return true;
+    }
+
+    // Check second diagonal
+    // 00x
+    // 0x0
+    // x00
+    uint8 secondDiagonalCounter = 0;
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x + shift][y + shift] == turn) {
+            secondDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x + shift == settings.m - 1) || (y + shift == settings.n - 1)) {
+            break;
+        }
+    }
+    for (uint8 shift = 0; shift <= settings.k; shift++) {
+        if (moves[x - shift][y - shift] == turn) {
+            secondDiagonalCounter++;
+        } else {
+            break;
+        }
+        if ((x - shift == 0) || (y - shift == 0)) {
+            break;
+        }
+    }
+    secondDiagonalCounter--;
+    if (secondDiagonalCounter >= settings.k) {
+        return true;
+    }
+
+    return false;
+}
+
 
 contract GameInstance {
     // Bid, initialy (while game status == GameStatus.Created) is set to 0
     uint256 private _bid;
-    // Players
-    mapping(Role => address) private _participants;
-    // State of the game itself
     State private _state;
+    mapping(uint8 => mapping(uint8 => Role)) private _moves;
+    mapping(Role => address) private _participants;
+
     // Size of the game field and the winning row length
     Settings private _settings;
 
     event PlayerJoined(address game, address player);
     event GameCancelled(address game);
+    event Move(address player, uint8 x, uint8 y);
+
+    function append_move(uint8 x, uint8 y) external {
+        require( _state.status == GameStatus.Running, "This game is not running.");
+        // If it is running, check that the caller is elidable to call
+        require(_participants[_state.currentTurn] == tx.origin, "This is not your turn, bud.");
+        // Check that the move is inbounds
+        require(
+            x < _settings.m && y < _settings.n && x >= 0 && y >= 0,
+            "This move is outside the game board."
+        );
+        // Check that this move hasnt been done yet
+        require(
+            !is_move_exists(_moves, x, y),
+            "This move has been played already."
+        );
+
+        _moves[x][y] = _state.currentTurn;
+        emit Move(msg.sender, x, y);
+    
+        // Check if the current player just won the game
+        if (check_winner(_moves, x, y, _state.currentTurn, _settings)) {
+            _state.status = GameStatus.Completed;
+        } else {
+            // Switch the player
+            if (_state.currentTurn == Role.Alice) {
+                _state.currentTurn = Role.Bob;
+            } else {
+                _state.currentTurn = Role.Alice;
+            }
+        }
+    }
 
     function join() public payable {
         if (_state.status == GameStatus.Created) {

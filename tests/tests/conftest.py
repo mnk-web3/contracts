@@ -76,7 +76,7 @@ async def create_game_and_get_logs(w3, main_contract, initiator, m=20, n=20, k=5
     )
 
 
-async def join_and_get_receipt(w3, game_instance, initiator):
+async def join_and_get_receipt(w3, game_instance, initiator, bid=DEFAULT_BID):
     return (
         await w3.eth.wait_for_transaction_receipt(
             await w3.eth.send_raw_transaction(
@@ -88,7 +88,7 @@ async def join_and_get_receipt(w3, game_instance, initiator):
                             "gas": GAS_LIMIT,
                             "gasPrice": GAS_PRICE,
                             "nonce": await w3.eth.get_transaction_count(initiator.address),
-                            "value": 10**18,
+                            "value": bid,
                         },
                     ),
                     initiator.key,
@@ -98,13 +98,13 @@ async def join_and_get_receipt(w3, game_instance, initiator):
     )
 
 
-async def join_and_get_logs(initiator, game_instance, w3):
+async def join_and_get_logs(initiator, game_instance, w3, bid=DEFAULT_BID):
     return (
         game_instance
             .events
             .PlayerJoined()
             .processReceipt(
-                await join_and_get_receipt(w3, game_instance, initiator)
+                await join_and_get_receipt(w3, game_instance, initiator, bid)
             )
     )
 
