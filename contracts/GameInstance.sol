@@ -189,21 +189,20 @@ contract GameInstance {
     event MoveAppended(address game, address player, uint8 x, uint8 y, bool is_winner);
 
     function append_move(uint8 x, uint8 y) public {
-        require( _state.status == GameStatus.Running, "This game is not running.");
-        // If it is running, check that the caller is elidable to call
-        require(_participants[_state.currentTurn] == tx.origin, "This is not your turn, bud.");
-        // Check that the move is inbounds
+        require( _state.status == GameStatus.Running, "ERROR: the game is not running");
+        require(_participants[_state.currentTurn] == tx.origin, "ERROR: not your turn");
         require(
-            x < _settings.m && y < _settings.n && x >= 0 && y >= 0, "This move is outside the game board."
+            x < _settings.m && y < _settings.n && x >= 0 && y >= 0, "ERROR: illegal move (outside the board)"
         );
-        // Check that the move hasnt been taken yet
-        require(!is_move_exists(_moves, x, y), "This move has been already taken.");
+        require(!is_move_exists(_moves, x, y), "ERROR: illegal move (already taken)");
 
         _moves[x][y] = _state.currentTurn;
     
         // Check if the current player just won the game
         if (check_winner(_moves, x, y, _state.currentTurn, _settings)) {
             _state.status = GameStatus.Completed;
+            // Unlock funds and write the log
+            payable(tx.origin).transfer(2 * _bid);
             emit MoveAppended(address(this), tx.origin, x, y, true);
         } else {
             // Switch the player
@@ -218,17 +217,17 @@ contract GameInstance {
 
     function join() public payable {
         if (_state.status == GameStatus.Created) {
-            require(_participants[Role.Alice] == tx.origin, "Alice must join the game first");
-            require(msg.value > 0, "Bid must be > 0");
+            require(_participants[Role.Alice] == tx.origin, "ERROR: game initiator should join first");
+            require(msg.value > 0, "ERROR: bid should be > 0");
             _bid = msg.value;
             _state.status = GameStatus.Waiting;
         } else if (_state.status == GameStatus.Waiting) {
-            require(_participants[Role.Alice] != tx.origin, "Alice, you should not play with yourself");
-            require(msg.value == _bid, "Your deposit is invalid");
+            require(_participants[Role.Alice] != tx.origin, "ERROR: trying to join as self opponent");
+            require(msg.value == _bid, "ERROR: your deposit doesnt match the game's requirement");
             _participants[Role.Bob] = tx.origin;
             _state.status = GameStatus.Running;
         } else {
-            revert("Invalid game state to call the 'join' function in");
+            revert("ERROR: you are not allowed to join");
         }
         emit PlayerJoined(address(this), tx.origin);
     }
@@ -252,30 +251,29 @@ contract GameInstance {
         return this.get_current_player();
     }
 
-    function get_mnk() view public returns (uint8, uint8, uint8) {
+    function get_settings() view public returns (uint8, uint8, uint8) {
         return (_settings.m, _settings.n, _settings.k);
     }
 
     function cancel_game() public {
         require(
             _state.status == GameStatus.Created || _state.status == GameStatus.Waiting,
-            "You can only cancel the game while it is just Created or Waiting"
+            "ERROR: you are not allowed to cancel the game (invalid state)"
         );
-        require(tx.origin == _participants[Role.Alice], "Only owner can cancel the game");
+        require(
+            tx.origin == _participants[Role.Alice],
+            "ERROR: you are not allowed to cancel the game (permission denied)"
+        );
         // Here Alice's funds already have been put into contract, so invoke refund
         if (_state.status == GameStatus.Waiting) {
-            (bool refundStatus, ) = tx.origin.call{value: _bid}("");
-            require(refundStatus, "Failed to cancel the game and refund");
+            payable(tx.origin).transfer(_bid);
         }
         _state.status = GameStatus.Aborted;
         emit GameCancelled(address(this));
     }
 
     constructor(uint8 m, uint8 n, uint8 k) {
-        require(
-            k <= m && k <= n && m > 0 && n > 0 && k > 0,
-            "K should be <= N && <= M and > 0"
-        );
+        require( k <= m && k <= n && m > 0 && n > 0 && k > 0, "ERROR: invalid settings");
         // The one, who created the game becomes Alice
         _participants[Role.Alice] = tx.origin;
         // At this stage Bob is still unknown

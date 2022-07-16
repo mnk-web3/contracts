@@ -69,7 +69,7 @@ class BobMove(Move):
             WhoWon.alice,
             id="degenerate_case",
         ),
-        # Field is trivial, so alice wins immediately and afterwards she's trying to add another move
+        # Field is trivial, so alice wins immediately. Afterwards she's trying to add another move.
         pytest.param(
             GameSettings(m=1, n=1, k=1),
             [
@@ -79,7 +79,7 @@ class BobMove(Move):
             WhoWon.alice,
             id="degenerate_case_no_move_after_win_alice",
         ),
-        # Field is trivial, so alice wins immediately and afterwards she's trying to add another move
+        # Field is trivial, so alice wins immediately. Afterwards bob is trying to add another move
         pytest.param(
             GameSettings(m=1, n=1, k=1),
             [
@@ -103,8 +103,9 @@ class BobMove(Move):
     ]
 )
 async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves, who_wins):
+    BID = 10 ** 18
     alice, bob, *_ = prepayed_wallets
-    game = await get_game_running(alice, bob, m=settings.m, n=settings.n, k=settings.k)
+    game = await get_game_running(alice, bob, m=settings.m, n=settings.n, k=settings.k, bid=BID)
     for move in moves:
         receipt = (
             await append_move_and_get_receipt(
@@ -129,3 +130,11 @@ async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves,
         case WhoWon.noone: winner_address = NULL_ADDRESS
 
     assert await game.functions.get_winner().call() == winner_address
+    # No the important part: check whether the FUNDS are SAFU
+    game_balance = await w3.eth.get_balance(game.address)
+    if winner_address == NULL_ADDRESS:
+        # If the game is running, the contract is expected to hold 2 * BID
+        assert game_balance == BID * 2
+    else:
+        # If the game is finished, funds better be unlocked
+        assert game_balance == 0
