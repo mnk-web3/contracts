@@ -28,6 +28,7 @@ class GameStatus(enum.IntEnum):
     running = 2
     completed = 3
     aborted = 4
+    exhausted = 5
 
 
 async def append_move_and_get_receipt(w3, game_instance, initiator, x, y):
@@ -52,13 +53,13 @@ async def append_move_and_get_receipt(w3, game_instance, initiator, x, y):
     )
 
 
-async def append_move_and_get_logs(w3, game_instance, initiator, x, y):
+async def append_move_and_get_logs(w3, main_contract, initiator, x, y):
     return (
-        game_instance
+        main_contract
             .events
             .MoveAppended()
             .processReceipt(
-                await append_move_and_get_receipt(w3, game_instance, initiator, x, y)
+                await append_move_and_get_receipt(w3, main_contract, initiator, x, y)
             )
     )
 

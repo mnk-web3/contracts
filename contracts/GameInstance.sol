@@ -3,16 +3,12 @@ pragma solidity =0.8.15;
 
 
 enum GameStatus {
-    Created,
-    Waiting,
-    Running,
-    Completed,
-    Aborted
-}
-
-struct Participant {
-    address addr;
-    uint256 deposit;
+    Created,     // just being created via the constructor
+    Waiting,     // initiator has joined the game
+    Running,     // opponents has joined the game
+    Completed,   // game has ended normally with a win
+    Aborted,     // initiator decided to abandon the game
+    Exhausted    // the move pool been exhausted, draw state
 }
 
 enum Role {
@@ -28,9 +24,9 @@ struct State {
 
 
 struct Settings {
-    uint8 m;
-    uint8 n;
-    uint8 k;
+    uint8 m; // board's width
+    uint8 n; // board's height
+    uint8 k; // winning streak length
 }
 
 
@@ -179,7 +175,9 @@ contract GameInstance {
     uint256 private _bid;
     State private _state;
     mapping(uint8 => mapping(uint8 => Role)) private _moves;
-    mapping(Role => address) private _participants;
+    // Denormalized propertry of the _moves field. Need this as there's len(_moves)
+    uint16 private _moves_counter;
+    mapping(Role => address) private _players;
 
     // Size of the game field and the winning row length
     Settings private _settings;
@@ -190,41 +188,52 @@ contract GameInstance {
 
     function append_move(uint8 x, uint8 y) public {
         require( _state.status == GameStatus.Running, "ERROR: the game is not running");
-        require(_participants[_state.currentTurn] == tx.origin, "ERROR: not your turn");
+        require(_players[_state.currentTurn] == tx.origin, "ERROR: not your turn");
         require(
             x < _settings.m && y < _settings.n && x >= 0 && y >= 0, "ERROR: illegal move (outside the board)"
         );
         require(!is_move_exists(_moves, x, y), "ERROR: illegal move (already taken)");
 
         _moves[x][y] = _state.currentTurn;
+        _moves_counter += 1;
     
         // Check if the current player just won the game
         if (check_winner(_moves, x, y, _state.currentTurn, _settings)) {
+            // append the "winner" move
+            emit MoveAppended(address(this), tx.origin, x, y, true);
             _state.status = GameStatus.Completed;
             // Unlock funds and write the log
             payable(tx.origin).transfer(2 * _bid);
-            emit MoveAppended(address(this), tx.origin, x, y, true);
         } else {
-            // Switch the player
-            if (_state.currentTurn == Role.Alice) {
-                _state.currentTurn = Role.Bob;
-            } else {
-                _state.currentTurn = Role.Alice;
-            }
+            // append the a regular move
             emit MoveAppended(address(this), tx.origin, x, y, false);
+            // Check if this is a tie
+            if (_moves_counter == _settings.m * _settings.n) {
+                _state.status = GameStatus.Exhausted;
+                // Return locked funds to both Alice and Bob
+                payable(_players[Role.Alice]).transfer(_bid);
+                payable(_players[Role.Bob]).transfer(_bid);
+            } else {
+                // Switch the player and continue
+                if (_state.currentTurn == Role.Alice) {
+                    _state.currentTurn = Role.Bob;
+                } else {
+                    _state.currentTurn = Role.Alice;
+                }
+            }
         }
     }
 
     function join() public payable {
         if (_state.status == GameStatus.Created) {
-            require(_participants[Role.Alice] == tx.origin, "ERROR: game initiator should join first");
+            require(_players[Role.Alice] == tx.origin, "ERROR: game initiator should join first");
             require(msg.value > 0, "ERROR: bid should be > 0");
             _bid = msg.value;
             _state.status = GameStatus.Waiting;
         } else if (_state.status == GameStatus.Waiting) {
-            require(_participants[Role.Alice] != tx.origin, "ERROR: trying to join as self opponent");
+            require(_players[Role.Alice] != tx.origin, "ERROR: trying to join as self opponent");
             require(msg.value == _bid, "ERROR: your deposit doesnt match the game's requirement");
-            _participants[Role.Bob] = tx.origin;
+            _players[Role.Bob] = tx.origin;
             _state.status = GameStatus.Running;
         } else {
             revert("ERROR: you are not allowed to join");
@@ -233,15 +242,19 @@ contract GameInstance {
     }
 
     function get_current_player() view public returns (address) {
-        return _participants[_state.currentTurn];
+        return _players[_state.currentTurn];
     }
 
     function get_game_status() view public returns (GameStatus) {
         return _state.status;
     }
 
+    function get_move_count() view public returns (uint16) {
+        return _moves_counter;
+    }
+
     function get_players() view public returns (address, address) {
-        return (_participants[Role.Alice], _participants[Role.Bob]);
+        return (_players[Role.Alice], _players[Role.Bob]);
     }
 
     function get_winner() view public returns (address) {
@@ -261,7 +274,7 @@ contract GameInstance {
             "ERROR: you are not allowed to cancel the game (invalid state)"
         );
         require(
-            tx.origin == _participants[Role.Alice],
+            tx.origin == _players[Role.Alice],
             "ERROR: you are not allowed to cancel the game (permission denied)"
         );
         // Here Alice's funds already have been put into contract, so invoke refund
@@ -275,9 +288,9 @@ contract GameInstance {
     constructor(uint8 m, uint8 n, uint8 k) {
         require( k <= m && k <= n && m > 0 && n > 0 && k > 0, "ERROR: invalid settings");
         // The one, who created the game becomes Alice
-        _participants[Role.Alice] = tx.origin;
+        _players[Role.Alice] = tx.origin;
         // At this stage Bob is still unknown
-        _participants[Role.Bob] = address(0);
+        _players[Role.Bob] = address(0);
         _state = State({
             currentTurn: Role.Alice,
             status: GameStatus.Created

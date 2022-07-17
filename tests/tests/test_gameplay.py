@@ -42,7 +42,7 @@ class BobMove(Move):
 
 
 @pytest.mark.parametrize(
-    "settings,moves,who_wins",
+    "settings,moves,who_wins,status",
     [
         pytest.param(
             GameSettings(m=3, n=3, k=3),
@@ -50,6 +50,7 @@ class BobMove(Move):
                 BobMove(0, 0, status=False),  # alice supposed to add here move first
             ],
             WhoWon.noone,
+            GameStatus.running,
             id="move_wrong_turn",
         ),
         pytest.param(
@@ -58,6 +59,7 @@ class BobMove(Move):
                 AliceMove(0, 0),
             ],
             WhoWon.noone,
+            GameStatus.running,
             id="game_is_still_in_progress",
         ),
         # Field is trivial, so alice wins immediately
@@ -67,6 +69,7 @@ class BobMove(Move):
                 AliceMove(0, 0, is_winner=True),
             ],
             WhoWon.alice,
+            GameStatus.completed,
             id="degenerate_case",
         ),
         # Field is trivial, so alice wins immediately. Afterwards she's trying to add another move.
@@ -77,6 +80,7 @@ class BobMove(Move):
                 AliceMove(0, 0, status=False),  # This move should fail as the game is now Completed
             ],
             WhoWon.alice,
+            GameStatus.completed,
             id="degenerate_case_no_move_after_win_alice",
         ),
         # Field is trivial, so alice wins immediately. Afterwards bob is trying to add another move
@@ -87,6 +91,7 @@ class BobMove(Move):
                 BobMove(0, 0, status=False),  # This move should fail as the game is now Completed
             ],
             WhoWon.alice,
+            GameStatus.completed,
             id="degenerate_case_no_move_after_win_bob",
         ),
         pytest.param(
@@ -99,14 +104,19 @@ class BobMove(Move):
                 AliceMove(2, 0, is_winner=True),
             ],
             WhoWon.alice,
+            GameStatus.completed,
         )
     ]
 )
-async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves, who_wins):
+async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves, who_wins, status):
     BID = 10 ** 18
     alice, bob, *_ = prepayed_wallets
     game = await get_game_running(alice, bob, m=settings.m, n=settings.n, k=settings.k, bid=BID)
+
+    moves_registered_expected = 0
     for move in moves:
+        if move.status:
+            moves_registered_expected += 1
         receipt = (
             await append_move_and_get_receipt(
                 w3=w3,
@@ -124,13 +134,16 @@ async def test_gameplay(w3, get_game_running, prepayed_wallets, settings, moves,
             assert len(logs) == 1
             assert logs[0]["args"]["is_winner"] == move.is_winner
     
+    assert await game.functions.get_move_count().call() == moves_registered_expected
+    assert await game.functions.get_winner().call() == winner_address
+    assert GameStatus(await game.functions.get_game_status().call()) == status
+
     match who_wins:
         case WhoWon.alice: winner_address = alice.address
         case WhoWon.bob: winner_address = bob.address
         case WhoWon.noone: winner_address = NULL_ADDRESS
 
-    assert await game.functions.get_winner().call() == winner_address
-    # No the important part: check whether the FUNDS are SAFU
+    # Now the important part: check whether the FUNDS are SAFU
     game_balance = await w3.eth.get_balance(game.address)
     if winner_address == NULL_ADDRESS:
         # If the game is running, the contract is expected to hold 2 * BID
