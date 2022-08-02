@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1.2
+
+FROM python:3.10
+
+
+RUN mkdir /usr/src/app
+WORKDIR /usr/src/app
+
+# Install poetry and pull up deps
+RUN pip install poetry
+COPY pyproject.toml .
+COPY poetry.lock .
+RUN poetry install --no-dev

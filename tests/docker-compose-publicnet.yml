@@ -1,0 +1,23 @@
+version: "3.7"
+services:
+  compiler:
+    env_file:
+      - "../${ENVFILE}"
+    # Store compilation metadata, which is used by the tester
+    volumes:
+      - "./build:/usr/src/app/build"
+      - "../migrations:/usr/src/app/migrations"
+      - "../contracts:/usr/src/app/contracts"
+    network_mode: host
+    image: compiler
+  tester:
+    env_file:
+      - "../${ENVFILE}"
+    network_mode: host
+    image: tester
+    depends_on:
+      - compiler
+    # Reed this to get ABI and contract's address
+    volumes:
+      - "./build:/usr/src/app/build"
+      - "./tests:/usr/src/app/tests"

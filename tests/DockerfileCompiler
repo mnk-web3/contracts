@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1.2
+
+FROM node:18
+
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+RUN yarn global add "truffle@5.5.23" "avalanche@3.15.3"
+RUN yarn add @harmony-js/core
+RUN yarn add @truffle/hdwallet-provider
+
+COPY truffle-config.js .
+
+# bake in the compiler into the image
+RUN truffle obtain --solc 0.8.15
+
+CMD truffle migrate --network anynet --reset --skip-dry-run
